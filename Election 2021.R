@@ -8,7 +8,10 @@ library(ggdark)
 library(rvest)
 
 
-setwd("~/Desktop/Election modelling")
+setwd("~/Desktop/Canadian_Election_2021")
+
+
+# Helper functions
 
 calc_moe <- function(x, ss) sqrt(x * (1-x) / ss)
 
@@ -34,7 +37,9 @@ clean_mode <- function(x){
 }
 
 
-#fit polls Canada 2011 to 2015
+
+
+#### scrape wikipedia for polls: 2015 to 2019 ####
 parties <- c("LPC", "CPC", "NDP", "BQ", "GPC")
 wiki <- read_html("https://en.wikipedia.org/wiki/Opinion_polling_for_the_2019_Canadian_federal_election")
 wiki_tables <- html_table(wiki, 
@@ -105,7 +110,6 @@ election_results[,parties] <- sapply(election_results[,parties], as.numeric)
 election_results[,parties] <- sapply(election_results[,parties], function(x) x / 100)
 
 
-
 # Sample size
 can_polls$SampleSize <- str_remove_all(can_polls$SampleSize, "\\([0-9]\\/[0-9]\\)")
 can_polls$SampleSize <- str_remove_all(can_polls$SampleSize, ",")
@@ -113,6 +117,8 @@ can_polls$SampleSize <- str_remove_all(can_polls$SampleSize, ",")
 
 #set.seed(10438174)
 #can_polls$SampleSize[can_polls$SampleSize == ""] <- sample(can_polls$SampleSize, 1)
+
+
 
 # Convert to numeric
 can_polls[,c(parties, "SampleSize")] <- sapply(can_polls[,c(parties, "SampleSize")], as.numeric)
@@ -140,24 +146,27 @@ can_polls$Other_moe <- calc_moe(can_polls$Other, can_polls$SampleSize)
 election_results$Other <- 1 - (election_results$LPC + election_results$CPC + 
                                  election_results$NDP + election_results$BQ + election_results$GPC)
 
+
+
+
 # Dates
 can_polls$PollDate <- mdy(can_polls$PollDate)
 election_results$PollDate <- mdy(election_results$PollDate)
 N_days <- as.numeric(election_results$PollDate[2] - election_results$PollDate[1]) + 1
 can_polls$NumDays <- as.numeric(can_polls$PollDate - election_results$PollDate[1]) + 1
 
+
 # Remove announcements
 can_polls <- subset(can_polls, !is.na(LPC))
 
 
-#Pre-2023 polls
+#### Add polls for post 2019, but pre 2023 (next scheduled election) ####
 wiki_2023 <- read_html("https://en.wikipedia.org/wiki/Opinion_polling_for_the_44th_Canadian_federal_election")
 wiki_tables_2023 <- html_table(wiki_2023, 
                                fill = TRUE, 
                                header = TRUE)
 
 
-# Campaign period polls
 pre_2023_polls <- wiki_tables_2023[[2]]
 pre_2023_polls$Polling_firm <- pre_2023_polls$`Polling firm`
 pre_2023_polls$PollDate <- pre_2023_polls$`Last dateof polling[1]`
@@ -227,7 +236,9 @@ pre_2023_polls <- subset(pre_2023_polls, !is.na(BQ))
 N_days_2021 <- as.numeric(ymd("2021-09-30") - election_results$PollDate[1]) + 1
 
 
-# Combine datasets
+# Combine datasets and remove all polls with missing data or who do not include
+# "Other" as a response choice
+# For simplicity
 can_polls2 <- rbind(can_polls, pre_2023_polls)
 can_polls2 <- can_polls2[complete.cases(can_polls2),]
 can_polls2 <- subset(can_polls2, Other > 0)
@@ -243,8 +254,6 @@ N_modes <- length(unique(can_polls2$mode))
 
 # fit state space model for pooling the polls
 state_space_all <- cmdstan_model("state_space_all_parties_non_centered_prediction.stan")
-#state_space_prior <- cmdstan_model("state_space_all_parties_non_centered_prediction.stan")
-
 
 all_data <- list(
   
@@ -381,27 +390,27 @@ ggsave(plot = house_effect_plot, filename = "house_effects_2015_to_2021.png",
        height = 5.25, width = 9.2, units = "in")
 house_effect_plot
 
-mode_effect_plot <- ggplot(mode_effects) +
-  geom_pointrange(mapping = aes(x = mode,
-                                y = mu,
-                                ymin = ll,
-                                ymax = uu),
-                  colour = "white") +
-  geom_hline(yintercept = 0,
-             colour = "orange",
-             linetype = "dashed") +
-  labs(x = NULL, 
-       y = "Percent",
-       title = "Survey mode effects: all parties",
-       subtitle = "2015 to 2021") +
-  scale_y_continuous(breaks = c(-0.05, 0.00, 0.05, 0.1),
-                     labels = c("-5", "0", "5", "10")) +
-  coord_flip() +
-  facet_wrap(~party) +
-  dark_theme_bw() 
-ggsave(plot = mode_effect_plot, filename = "mode_effects_2015_to_2021.png",
-       height = 5.25, width = 9.2, units = "in")
-mode_effect_plot
+#mode_effect_plot <- ggplot(mode_effects) +
+#  geom_pointrange(mapping = aes(x = mode,
+#                                y = mu,
+#                                ymin = ll,
+#                                ymax = uu),
+#                  colour = "white") +
+#  geom_hline(yintercept = 0,
+#             colour = "orange",
+#             linetype = "dashed") +
+#  labs(x = NULL, 
+#       y = "Percent",
+#       title = "Survey mode effects: all parties",
+#       subtitle = "2015 to 2021") +
+#  scale_y_continuous(breaks = c(-0.05, 0.00, 0.05, 0.1),
+#                     labels = c("-5", "0", "5", "10")) +
+#  coord_flip() +
+#  facet_wrap(~party) +
+#  dark_theme_bw() 
+#ggsave(plot = mode_effect_plot, filename = "mode_effects_2015_to_2021.png",
+#       height = 5.25, width = 9.2, units = "in")
+#mode_effect_plot
 
 
 
@@ -481,62 +490,3 @@ prior_df$mu <- prior_df$mu / sum_mu #force sum-to-one constraint
 prior_df$sigma <- prior_df$sigma / sum_mu #hacky adjustment to sigma 
 
 
-
-
-
-
-
-
-
-predict(mod_LPC, newdata = newdata)
-predict(mod_CPC, newdata = newdata)
-predict(mod_NDP, newdata = newdata)
-predict(mod_BQ, newdata = newdata)
-predict(mod_GPC, newdata = newdata)
-predict(mod_Other, newdata = newdata)
-
-predict(mod_CPC, newdata = data.frame(logtime = log(24 + 46),
-                                  CPC_pop = .285,
-                                  UR = 7.5, 
-                                  CPC_incumbent = 0))
-
-pred_data = data.frame(time = 24,
-                       LPC_pop = 36.5,
-                       UR = 7.5, 
-                       CPC_incumbent = 0)
-
-
-
-
-
-sur_data <- list(
-  
-  N_elections = 6,
-  N_parties = length(parties_all),
-  P = 7,
-  
-  
-  Y = as.matrix(raw_results[1:6, parties_all]),
-  X = as.matrix(raw_results[1:6, c("LPC_pop", "CPC_pop", "NDP_pop", "BQ_pop", "GPC_pop", 
-                                   "Other_pop", "logtime")]),
-  
-  X_mis = as.vector(newdata[,c("LPC_pop", "CPC_pop", "NDP_pop", "BQ_pop", "GPC_pop", 
-                                       "Other_pop", "logtime")])
-  
-  
-)
-
-
-
-sur_model <- cmdstan_model("SUR.stan")
-fit_sur <- sur_model$sample(
-  data = sur_data,
-  seed = 6319483,
-  chains = 4,
-  parallel_chains = 4,
-  iter_warmup = 1000,
-  iter_sampling = 1500,
-  refresh = 100,
-  max_treedepth = 15,
-  adapt_delta = 0.95
-)
