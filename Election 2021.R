@@ -1,5 +1,6 @@
 library(tidyverse)
-library(pscl)
+library(magrittr)
+library(data.table)
 library(cmdstanr)
 library(bayesplot)
 library(posterior)
@@ -9,6 +10,9 @@ library(rvest)
 
 
 setwd("~/Desktop/Election modelling")
+
+
+#### Helper functions + plot theme ####
 
 calc_moe <- function(x, ss) sqrt(x * (1-x) / ss)
 
@@ -34,7 +38,19 @@ clean_mode <- function(x){
 }
 
 
-#fit polls Canada 2011 to 2015
+theme_blog <- theme_minimal() +
+  theme(plot.caption = element_text(colour = "grey50"),
+        text = element_text(family = "Courier"),
+        strip.text = element_text(size = rel(.9), face = "bold"),
+        axis.text = element_text(size = rel(1.0)),
+        plot.title  = element_text(face = "bold"),
+        plot.subtitle  = element_text(face = "bold"),
+        axis.line.x.bottom = element_line(colour = "grey50"),
+        axis.line.y.left = element_line(colour = "grey50"))
+
+
+
+#### fit polls Canada 2015 to 2019 ####
 parties <- c("LPC", "CPC", "NDP", "BQ", "GPC")
 wiki <- read_html("https://en.wikipedia.org/wiki/Opinion_polling_for_the_2019_Canadian_federal_election")
 wiki_tables <- html_table(wiki, 
@@ -241,7 +257,7 @@ fit_all <- state_space_all$sample(
 
 # diagnoses
 fit_all$cmdstan_diagnose()
-fit_all$save_object(file = "fit_all_July19.RDS")
+fit_all$save_object(file = "fit_all_July23.RDS")
 
 
 # extract info for plots
@@ -303,40 +319,41 @@ vote_intention <- ggplot() +
   labs(title = "Vote intention of Canadian voters",
        subtitle = "2015 to 2021",
        x = NULL,
-       y = NULL) +
+       y = NULL,
+       caption = "Source: Data from Wikipedia. Analysis by sjwild.github.io\nUpdated 25-July-2021") +
   scale_colour_manual(breaks = parties_all,
                       values = c("red", "blue", "orange", "lightblue", "green", "purple"),
                       name = "Party") +
   scale_fill_manual(breaks = parties_all,
-                    values = c("red", "blue", "orange", "lightblue", "green", "purple"),
+                    values = c("red", "blue", "orange", "skyblue", "green", "purple"),
                     name = "Party") +
   scale_y_continuous(breaks = c(0, .2, .4, .6),
                      labels = c("0%", "20%", "40%", "60%")) +
-  dark_theme_minimal()
+  theme_blog
 ggsave(plot = vote_intention, filename = "vote_intention_2015_to_2021.png",
-       height = 5.25, width = 9.2, units = "in")
+       height = 3, width = 5, units = "in")
 vote_intention
 
 house_effect_plot <- ggplot(house_effects) +
   geom_pointrange(mapping = aes(x = Polling_firm,
                                 y = mu,
                                 ymin = ll,
-                                ymax = uu),
-                  colour = "white") +
+                                ymax = uu)) +
   geom_hline(yintercept = 0,
              colour = "orange",
              linetype = "dashed") +
   labs(x = NULL, 
        y = "Percent",
        title = "House effects: all parties",
-       subtitle = "2015 to 2021") +
+       subtitle = "2015 to 2021",
+       caption = "Source: Data from Wikipedia. Analysis by sjwild.github.io\nUpdated 25-July-2021") +
   scale_y_continuous(breaks = c(-0.05, 0.00, 0.05, 0.1),
                      labels = c("-5", "0", "5", "10")) +
   coord_flip() +
   facet_wrap(~party) +
-  dark_theme_bw() 
+  theme_blog
 ggsave(plot = house_effect_plot, filename = "house_effects_2015_to_2021.png",
-       height = 5.25, width = 9.2, units = "in")
+       height = 1500, width = 2000, units = "px")
 house_effect_plot
 
 #mode_effect_plot <- ggplot(mode_effects) +
@@ -371,7 +388,7 @@ for(i in 1:N_days_2021) sums[i] <- sum(all_trend$mu[all_trend$NumDays == i])
 
 ggplot(data.frame(X = sums)) + 
   geom_density(mapping = aes(x = X))  +
-  dark_theme_bw()
+  theme_blog
 
 
 
@@ -418,83 +435,62 @@ newdata = data.frame(logtime = log(24 + 46),
                      year_num = 7)
 
 
-mod_list <- list()
-mod_list[[1]] <- lm(LPC ~ 1 + LPC_pop + logtime, data = raw_results[1:6,])
-mod_list[[2]] <- lm(CPC ~ 1 + CPC_pop + logtime, data = raw_results[1:6,])
-mod_list[[3]] <- lm(NDP ~ 1 + NDP_pop + logtime, data = raw_results[1:6,])
-mod_list[[4]] <- lm(BQ ~ 1 + BQ_pop + logtime, data = raw_results[1:6,])
-mod_list[[5]] <- lm(GPC ~ 1 + GPC_pop + logtime, data = raw_results[1:6,])
-mod_list[[6]] <- lm(Other ~ 1 + Other_pop + logtime, data = raw_results[1:6,])
 
 
-prior_df <- data.frame(mu = rep(NA, length(parties_all)),
-                       sigma = rep(NA, length(parties_all)))
-for(i in 1:length(parties_all)){
-  prior_df[i,1] <- predict(mod_list[[i]], newdata = newdata)
-  prior_df[i,2] <- summary(mod_list[[i]])$sigma
+
+
+#### Load seat data to estimate vote by district ####
+file_list <- list.files(path = "Vote 2019")
+
+results_2019_list <- list()
+for(i in 1:length(file_list)){
+  results_2019_list[[i]] <- read.csv(file = paste0("Vote 2019/", file_list[i]))
 }
 
-sum_mu <- sum(prior_df$mu)
-prior_df$mu <- prior_df$mu / sum_mu #force sum-to-one constraint
-prior_df$sigma <- prior_df$sigma / sum_mu #hacky adjustment to sigma 
+results_2019_full <- rbindlist(results_2019_list)
+rm(results_2019_list)
+
+# Summarize results by riding
+results_2019_full$RidingNumber <- results_2019_full$Electoral.District.Number.Numéro.de.circonscription
+results_2019_full$Elected <- ifelse(results_2019_full$Elected.Candidate.Indicator.Indicateur.du.candidat.élu == "Y",
+                                    1, 0)
+results_2019_full$Party <- results_2019_full$Political.Affiliation.Name_English.Appartenance.politique_Anglais
+results_2019_full$Incumbent <- ifelse(results_2019_full$Incumbent.Indicator.Indicateur_Candidat.sortant == "Y", 1, 0)
+results_2019_full$VoteCount <- results_2019_full$Candidate.Poll.Votes.Count.Votes.du.candidat.pour.le.bureau
+results_2019_full <- results_2019_full[, c("RidingNumber", "Party", "Elected", "Incumbent", "VoteCount")] 
+
+# Rename parties
+results_2019_full$Party[results_2019_full$Party == "Liberal"] <- "LPC"
+results_2019_full$Party[results_2019_full$Party == "Conservative"] <- "CPC"
+results_2019_full$Party[results_2019_full$Party == "NDP-New Democratic Party"] <- "NDP"
+results_2019_full$Party[results_2019_full$Party == "Bloc Québécois"] <- "BQ"
+results_2019_full$Party[results_2019_full$Party == "Green Party"] <- "GPC"
+results_2019_full$Party <- ifelse(results_2019_full$Party %in% parties, results_2019_full$Party, "Other")
+
+#succumb to tidyverse style
+results_2019 <- results_2019_full %>% 
+  group_by(RidingNumber, Party) %>%
+  summarize(Elected = max(Elected),
+            Incumbent = max(Incumbent),
+            VoteCount = sum(VoteCount, na.rm = TRUE))
+results_2019 <- results_2019 %>%
+  group_by(RidingNumber) %>%
+  mutate(VotePercent = VoteCount/sum(VoteCount))
+
+
+results_2019 <- left_join(results_2019, data.frame(Party = c("LPC", "CPC", "NDP", "BQ", "GPC", "Other"),
+                                                   Vote2019 = c(.331, .343, .16, .076, .065, 
+                                                                1 - (.331 + .343 + .16 + .076 + .065))),
+                          by = "Party")
+
+results_2019 <- pivot_wider(results_2019[, c("RidingNumber", "VotePercent", "Vote2019", "Incumbent", "Party")],
+                           names_from = "Party", 
+                           values_from = c("VotePercent", "Vote2019", "Incumbent"))
+results_2019$VotePercent_Other[is.na(results_2019$VotePercent_Other)] <- 0.0
+results_2019$VotePercent_BQ[is.na(results_2019$VotePercent_BQ)] <- 0.0
+results_2019$Vote2019_BQ[is.na(results_2019$Vote2019_BQ)] <- 0.076
+results_2019$Vote2019_Other[is.na(results_2019$Vote2019_Other)] <- 0.025
 
 
 
 
-
-
-
-
-
-predict(mod_LPC, newdata = newdata)
-predict(mod_CPC, newdata = newdata)
-predict(mod_NDP, newdata = newdata)
-predict(mod_BQ, newdata = newdata)
-predict(mod_GPC, newdata = newdata)
-predict(mod_Other, newdata = newdata)
-
-predict(mod_CPC, newdata = data.frame(logtime = log(24 + 46),
-                                  CPC_pop = .285,
-                                  UR = 7.5, 
-                                  CPC_incumbent = 0))
-
-pred_data = data.frame(time = 24,
-                       LPC_pop = 36.5,
-                       UR = 7.5, 
-                       CPC_incumbent = 0)
-
-
-
-
-
-sur_data <- list(
-  
-  N_elections = 6,
-  N_parties = length(parties_all),
-  P = 7,
-  
-  
-  Y = as.matrix(raw_results[1:6, parties_all]),
-  X = as.matrix(raw_results[1:6, c("LPC_pop", "CPC_pop", "NDP_pop", "BQ_pop", "GPC_pop", 
-                                   "Other_pop", "logtime")]),
-  
-  X_mis = as.vector(newdata[,c("LPC_pop", "CPC_pop", "NDP_pop", "BQ_pop", "GPC_pop", 
-                                       "Other_pop", "logtime")])
-  
-  
-)
-
-
-
-sur_model <- cmdstan_model("SUR.stan")
-fit_sur <- sur_model$sample(
-  data = sur_data,
-  seed = 6319483,
-  chains = 4,
-  parallel_chains = 4,
-  iter_warmup = 1000,
-  iter_sampling = 1500,
-  refresh = 100,
-  max_treedepth = 15,
-  adapt_delta = 0.95
-)
