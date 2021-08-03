@@ -9,11 +9,24 @@ using LinearAlgebra
 using Measures
 using Random 
 
-# Helper function
+# Helper functions
 function calc_moe(x, ss)
     return  sqrt(x * (1-x) / ss)
 
 end
+
+function extract_params(chn::Chains, param::String)
+
+    tmp = chn |> DataFrame
+    tmp = tmp[:, startswith.(names(tmp), param)]
+    ll = [quantile(tmp[:,i], 0.025) for i in 1:size(tmp, 2)]
+    m = [quantile(tmp[:,i], 0.5) for i in 1:size(tmp, 2)]
+    uu = [quantile(tmp[:,i], 0.975) for i in 1:size(tmp, 2)]
+
+    return ll, m, uu
+end
+
+
 
 # Dates
 dateformat = DateFormat("y-m-d")
@@ -22,15 +35,18 @@ election_day_2019 = Date(2019, 10, 21)
 election_day_2021 = Date(2021, 09, 30)
 
 # Load pre-cleaned polls
-can_polls = CSV.read("can_poll2.csv", DataFrame; missingstring ="NA")
+can_polls = CSV.read("can_polls2.csv", DataFrame; missingstring ="NA")
 can_polls = dropmissing(can_polls, [:BQ, :GPC])
 can_polls[:, :Other] = [1 - sum(can_polls[i,[:LPC, :CPC, :NDP, :BQ, :GPC]]) for i in 1:size(can_polls, 1)]
 can_polls = can_polls[can_polls.Other .> 0.0000, :]
 
 # Pollster id
-#pollster_dict = Dict(key => idx for (idx, key) in enumerate(unique(can_polls.Polling_firm)))
-#can_polls.pollster_id = [pollster_dict[i] for i in can_polls.Polling_firm]
+pollster_dict = Dict(key => idx for (idx, key) in enumerate(unique(can_polls.Polling_firm)))
+can_polls.pollster_id = [pollster_dict[i] for i in can_polls.Polling_firm]
+reverse_pollster = Dict(value => key for (key, value) in pollster_dict)
 
+
+# Dates for plotting
 can_polls.poll_date = election_day_2015 .+ Dates.Day.(can_polls.NumDays) .- Dates.Day(1)
 
 
@@ -49,10 +65,9 @@ end_election = Vector([.331, .343, 0.16, 0.076, 0.065])
 poll_date = convert.(Int64, can_polls.NumDays)
 poll_id = [1:size(can_polls, 1);]
 pollster_id = can_polls.pollster_id
-mode_id = can_polls.mode_id
+mode_id = Vector(can_polls.mode_id)
 
 
-# Turing model for pooling polls
 @model function state_space_elections(
     y::Matrix, 
     y_moe::Matrix, 
@@ -149,8 +164,8 @@ mod_election = state_space_elections(y_mat,
 
 
 # Set iters and ids
-n_adapt = 1250
-n_iter = 750
+n_adapt = 1500
+n_iter = 500
 n_chains = 4
 
 
@@ -193,7 +208,6 @@ for j in 1:N_days
 end
 
 
-
 # Plot ξ and polls over time
 num_days = election_day_2015 .+ Dates.Day.(1:N_days) .- Dates.Day(1)
 colours = [:red, :blue, :orange, :cyan, :green]
@@ -201,17 +215,71 @@ colours = [:red, :blue, :orange, :cyan, :green]
 plt = plot(size = (750, 500), legend = :topright, fontfamily = :Courier, left_margin = 10mm, bottom_margin = 15mm, ylabel = "Vote intention (%)")
 ylims!(plt, (0.0, 0.6))
 for i in 1:length(colours)
-    scatter!(plt, (can_polls.poll_date), can_polls[:, parties[i]], label = parties[i], mc = colours[i])
+    scatter!(plt, can_polls.poll_date, can_polls[:, parties[i]], label = parties[i], mc = colours[i])
     plot!(plt, num_days, ξ_m[:,i], ribbon = (ξ_m[:,i] - ξ_ll[:,i], ξ_uu[:,i] - ξ_m[:,i]), 
           label = nothing, fc = colours[i], lc = colours[i], lw = 2)
 end
 
 title!(plt, "Estimated vote intention of Canadian voters:\n2015 to 2021", title_align= :left, titlefontsize = 12)
-annotate!(plt, num_days[end], -0.08, StatsPlots.text("Source: Wikipedia. Analysis by sjwild.github.io\nUpdated July 30, 2021", :lower, :right, 8, :grey))
+annotate!(plt, num_days[end], -0.08, StatsPlots.text("Source: Wikipedia. Analysis by sjwild.github.io\nUpdated Aug. 2, 2021", :lower, :right, 8, :grey))
 yticks!(plt, [0.0, 0.1, 0.2, 0.3, 0.4, 0.5], 
              ["0", "10", "20", "30", "40", "50"])
 
 savefig(plt, "can_vote_intention_2015_2021.png")
 
+
+
+
+
+# Plot house effects
+parties_list = repeat(parties, inner = N_pollsters)
+δ_ll, δ_m, δ_uu = extract_params(chns_election, "δ")
+pollsters = [reverse_pollster[i] for i in 1:maximum(can_polls.pollster_id)]
+
+
+
+plt_house = []
+for i in 1:length(parties)
+    plt_tmp = plot(legend = false, title = parties[i], title_align = :left, xlims = (-0.1, .1),
+                   fontfamily = :Courier, 
+                   bottom_margin = 15mm,
+                   left_margin = 4mm)
+    Plots.scatter!(plt_tmp, (δ_m[parties_list .== parties[i]], pollsters), xerror = (δ_m[parties_list .== parties[i]] - δ_ll[parties_list .== parties[i]], δ_uu[parties_list .== parties[i]] - δ_m[parties_list .== parties[i]]),
+                   mc = :black, msc = :black)
+    vline!(plt_tmp, [0.0], linestyle = :dot, lc = :orange)
+    xticks!(plt_tmp, ([-.1, -0.05, 0, 0.05, .1], ["-10", "-5", "0", "5", "10"]))
+    if i == 1
+        yticks!(plt_tmp, 0.5:1:(length(pollsters) + 0.5), pollsters)
+    else
+        yaxis!(plt_tmp, y_ticks = nothing)
+    end
+
+    if i == 3
+        xaxis!(x_guide = "Percent")
+    end
+
+    push!(plt_house, plt_tmp)
+end
+
+annotate!(plt_house[5], .1, -2.0, 
+          StatsPlots.text("Source: Wikipedia. Analysis by sjwild.github.io\nUpdated Aug. 2, 2021", 
+          :lower, :right, 8, :grey))
+
+title = plot(title = "House effects: 2015 to 2021", titlefontsize = 16,
+             titlefontfamily = :Courier,
+             grid = false, xaxis = nothing, yaxis = nothing, 
+             showaxis = false, bottom_margin = 1mm)
+
+plt_house_effects = plot(title,
+                         plt_house[1],
+                         plt_house[2],
+                         plt_house[3],
+                         plt_house[4],
+                         plt_house[5],
+                         layout = @layout([A{0.01h}; [B C D E F]]),
+                         size = (1100, 750))
+
+
+savefig(plt_house_effects, "house_effects_pollsters.png")
 
 
