@@ -4,7 +4,7 @@ This is an attempt to model the upcoming 2021 (?) Canadian federal election usin
 
 The model assumes that there is an underlying latent voting intention for each of the five main parties (plus others) that is measured by a bunch of noisy polls.  
 
-The model is based on the model suggested by Simon Jackman in his book, _Bayesian Analysis for the Social Sciences_, and updated by [Peter Ellis]( http://freerangestats.info/elections/oz-2019/index.html). My Stan and Turing version differ from their versions in the following ways:  
+The model is based on the model suggested by Simon Jackman in his book, _Bayesian Analysis for the Social Sciences_, and updated by [Peter Ellis]( http://freerangestats.info/elections/oz-2019/index.html). My Stan and Turing versions differ from their versions in the following ways:  
 
 * I use the cholesky decomposition for the non-centered paramterization to improve sampling of the innovation sd (Stan)
 * I anchor the election results, and use the polling error to predict voting intention for the period after the 2019 election 
@@ -14,7 +14,7 @@ The model is based on the model suggested by Simon Jackman in his book, _Bayesia
   * a mode-by-party error
   * pollster-by-party error
 
-The Julia model is run using Turing.jl It is coded using a slightly different way of creating a covariance matrix, so that I am able to use Distributions.jl and Turing.jl. I will (hopefully) recode the model when (if?) Distributions.jl gets a native cholesky decomposition of the LKJ distribution.
+The Julia model is run using Turing.jl. The Turing model is coded using a different way of creating a covariance matrix, so that I am able to use Distributions.jl and Turing.jl. I will (hopefully) recode the model when (if?) Distributions.jl gets a native cholesky decomposition of the LKJ distribution.
 
 The predictions for voting intention (that is, for the period after 2019-10-21, the date of 2019 Canadian election) assume that the polling errors are the same after the election as before it. That may or may not be true. I suspect that polling errors are correlated between periods.
 
@@ -31,7 +31,11 @@ As of July 30, 2021, these are the estimated vote shares based on Canadian polls
 
 
 
+![alt text](https://github.com/sjwild/Canandian_Election_2021/raw/main/can_vote_intention_2019_2021.png "Vote share of Canadian parties from 2019 to 2021.")
+
+
 ![alt text](https://github.com/sjwild/Canandian_Election_2021/raw/main/can_vote_intention_2015_2021.png "Vote share of Canadian parties from 2015 to 2021.")
+
 
 ## House effects
 House effects vary, but in general firms tended to overestimate NDP and Green Party vote share while underestimating CPC and BQ vote share. 

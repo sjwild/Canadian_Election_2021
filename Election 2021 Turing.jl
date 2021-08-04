@@ -1,7 +1,6 @@
 using Plots, StatsPlots
 using DataFrames, CSV
 using Turing, ReverseDiff, Memoization
-using RDatasets
 using StatsFuns
 using Dates
 using JLD
@@ -52,6 +51,7 @@ can_polls.poll_date = election_day_2015 .+ Dates.Day.(can_polls.NumDays) .- Date
 
 # Prep data for model
 parties = ["LPC", "CPC", "NDP", "BQ", "GPC"]
+#parties = ["LPC", "CPC", "NDP", "BQ", "GPC", "Other"]
 election_2019 = Dates.value(election_day_2019 - election_day_2015) + 1
 N_days = Dates.value(election_day_2021 - election_day_2015) + 1
 N_polls = size(can_polls, 1)
@@ -62,6 +62,8 @@ y_mat = Matrix(can_polls[:, parties])
 y_mat_moe = Matrix(calc_moe.(y_mat, can_polls.SampleSize))
 start_election = Vector([.395, .319, .197, 0.047, 0.034])
 end_election = Vector([.331, .343, 0.16, 0.076, 0.065]) 
+#start_election = Vector([.395, .319, .197, 0.047, 0.034, .008])
+#end_election = Vector([.331, .343, 0.16, 0.076, 0.065, 0.25]) 
 poll_date = convert.(Int64, can_polls.NumDays)
 poll_id = [1:size(can_polls, 1);]
 pollster_id = can_polls.pollster_id
@@ -94,7 +96,7 @@ mode_id = Vector(can_polls.mode_id)
 
     # Omega and Rho for non-centered parameterization
     z_ω ~ filldist(Normal(0, 1), N_parties, (N_days - 2))
-    ω ~ filldist(Normal(0, 0.05), N_parties)
+    ω ~ filldist(truncated(Normal(0, 0.005), 0, Inf), N_parties)
     ρ ~ LKJ(N_parties, 2.0)
 
 
@@ -164,8 +166,8 @@ mod_election = state_space_elections(y_mat,
 
 
 # Set iters and ids
-n_adapt = 1500
-n_iter = 500
+n_adapt = 750
+n_iter = 750
 n_chains = 4
 
 
@@ -211,6 +213,8 @@ end
 # Plot ξ and polls over time
 num_days = election_day_2015 .+ Dates.Day.(1:N_days) .- Dates.Day(1)
 colours = [:red, :blue, :orange, :cyan, :green]
+#colours = [:red, :blue, :orange, :cyan, :green, :purple]
+
 
 plt = plot(size = (750, 500), legend = :topright, fontfamily = :Courier, left_margin = 10mm, bottom_margin = 15mm, ylabel = "Vote intention (%)")
 ylims!(plt, (0.0, 0.6))
@@ -283,3 +287,24 @@ plt_house_effects = plot(title,
 savefig(plt_house_effects, "house_effects_pollsters.png")
 
 
+
+# Plt 2019 to election day
+plt_2019 = plot(size = (750, 500), legend = :topright, fontfamily = :Courier, left_margin = 10mm, bottom_margin = 15mm, ylabel = "Vote intention (%)")
+ylims!(plt_2019, (0.0, 0.6))
+for i in 1:length(colours)
+    scatter!(plt_2019, can_polls.poll_date[can_polls.poll_date .≥ Date(2019, 10, 21)], 
+             can_polls[can_polls.poll_date .≥ Date(2019, 10, 21), parties[i]], 
+             label = parties[i], mc = colours[i])
+    plot!(plt_2019, num_days[num_days .≥ Date(2019, 10, 21)], 
+          ξ_m[num_days .≥ Date(2019, 10, 21), i], 
+          ribbon = (ξ_m[num_days .≥ Date(2019, 10, 21), i] - ξ_ll[num_days .≥ Date(2019, 10, 21), i], 
+                    ξ_uu[num_days .≥ Date(2019, 10, 21), i] - ξ_m[num_days .≥ Date(2019, 10, 21), i]), 
+                    label = nothing, fc = colours[i], lc = colours[i], lw = 2)
+end
+
+title!(plt_2019, "Estimated vote intention of Canadian voters:\n2019 to 2021", title_align= :left, titlefontsize = 12)
+annotate!(plt_2019, num_days[end], -0.08, StatsPlots.text("Source: Wikipedia. Analysis by sjwild.github.io\nUpdated Aug. 2, 2021", :lower, :right, 8, :grey))
+yticks!(plt_2019, [0.0, 0.1, 0.2, 0.3, 0.4, 0.5], 
+             ["0", "10", "20", "30", "40", "50"])
+
+savefig(plt_2019, "can_vote_intention_2019_2021.png")
