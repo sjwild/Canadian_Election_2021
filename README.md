@@ -34,6 +34,7 @@ As of July 30, 2021, these are the estimated vote shares based on Canadian polls
 ![alt text](https://github.com/sjwild/Canandian_Election_2021/raw/main/can_vote_intention_2019_2021.png "Vote share of Canadian parties from 2019 to 2021.")
 
 
+
 ![alt text](https://github.com/sjwild/Canandian_Election_2021/raw/main/can_vote_intention_2015_2021.png "Vote share of Canadian parties from 2015 to 2021.")
 
 
