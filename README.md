@@ -19,15 +19,15 @@ The Julia model is run using Turing.jl. The Turing model is coded using a differ
 The predictions for voting intention (that is, for the period after 2019-10-21, the date of 2019 Canadian election) assume that the polling errors are the same after the election as before it. That may or may not be true. I suspect that polling errors are correlated between periods.
 
 ## Vote intention
-As of July 30, 2021, these are the estimated vote shares based on Canadian polls:
+As of August 5, 2021, these are the estimated vote shares based on Canadian polls:
 
 |**Party**    | **Vote share**  | **95% bounds**     |
 |-------------|:---------------:|:------------------:|
-|**LPC**      | 36.3%           | (34.6%, 38.6%)     |
-|**CPC**      | 31.1%           | (29.2%, 33.0%)     |
-|**NDP**      | 17.3%           | (15.5%, 19.1%)     |
-|**BQ**       | 7.1%            | (6.3%, 7.9%)       |
-|**GPC**      | 3.6%            | (4.1%, 5.9%)       |
+|**LPC**      | 36.9%           | (34.8%, 39.2%)     |
+|**CPC**      | 31.1%           | (29.4%, 32.8%)     |
+|**NDP**      | 17.8%           | (16.0%, 19.6%)     |
+|**BQ**       | 7.3%            | (6.5%, 8.2%)       |
+|**GPC**      | 4.0%            | (2.9%, 5.1%)       |
 
 
 

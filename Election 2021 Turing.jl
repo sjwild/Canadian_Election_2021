@@ -211,7 +211,7 @@ end
 
 
 # Plot ξ and polls over time
-num_days = election_day_2015 .+ Dates.Day.(1:N_days) .- Dates.Day(1)
+xi_days = election_day_2015 .+ Dates.Day.(1:N_days) .- Dates.Day(1)
 colours = [:red, :blue, :orange, :cyan, :green]
 #colours = [:red, :blue, :orange, :cyan, :green, :purple]
 
@@ -220,12 +220,12 @@ plt = plot(size = (750, 500), legend = :topright, fontfamily = :Courier, left_ma
 ylims!(plt, (0.0, 0.6))
 for i in 1:length(colours)
     scatter!(plt, can_polls.poll_date, can_polls[:, parties[i]], label = parties[i], mc = colours[i])
-    plot!(plt, num_days, ξ_m[:,i], ribbon = (ξ_m[:,i] - ξ_ll[:,i], ξ_uu[:,i] - ξ_m[:,i]), 
+    plot!(plt, xi_days, ξ_m[:,i], ribbon = (ξ_m[:,i] - ξ_ll[:,i], ξ_uu[:,i] - ξ_m[:,i]), 
           label = nothing, fc = colours[i], lc = colours[i], lw = 2)
 end
 
 title!(plt, "Estimated vote intention of Canadian voters:\n2015 to 2021", title_align= :left, titlefontsize = 12)
-annotate!(plt, num_days[end], -0.08, StatsPlots.text("Source: Wikipedia. Analysis by sjwild.github.io\nUpdated Aug. 2, 2021", :lower, :right, 8, :grey))
+annotate!(plt, xi_days[end], -0.08, StatsPlots.text("Source: Wikipedia. Analysis by sjwild.github.io\nUpdated Aug. 5, 2021", :lower, :right, 8, :grey))
 yticks!(plt, [0.0, 0.1, 0.2, 0.3, 0.4, 0.5], 
              ["0", "10", "20", "30", "40", "50"])
 
@@ -266,7 +266,7 @@ for i in 1:length(parties)
 end
 
 annotate!(plt_house[5], .1, -2.0, 
-          StatsPlots.text("Source: Wikipedia. Analysis by sjwild.github.io\nUpdated Aug. 2, 2021", 
+          StatsPlots.text("Source: Wikipedia. Analysis by sjwild.github.io\nUpdated Aug. 5, 2021", 
           :lower, :right, 8, :grey))
 
 title = plot(title = "House effects: 2015 to 2021", titlefontsize = 16,
@@ -303,8 +303,27 @@ for i in 1:length(colours)
 end
 
 title!(plt_2019, "Estimated vote intention of Canadian voters:\n2019 to 2021", title_align= :left, titlefontsize = 12)
-annotate!(plt_2019, num_days[end], -0.08, StatsPlots.text("Source: Wikipedia. Analysis by sjwild.github.io\nUpdated Aug. 2, 2021", :lower, :right, 8, :grey))
+annotate!(plt_2019, xi_days[end], -0.08, StatsPlots.text("Source: Wikipedia. Analysis by sjwild.github.io\nUpdated Aug. 5, 2021", :lower, :right, 8, :grey))
 yticks!(plt_2019, [0.0, 0.1, 0.2, 0.3, 0.4, 0.5], 
              ["0", "10", "20", "30", "40", "50"])
 
 savefig(plt_2019, "can_vote_intention_2019_2021.png")
+
+function get_value(x)
+
+    out = Matrix{Float64}(undef, 5, 3)
+
+    out[:,1] = ξ_m[num_days .== x,:]
+    out[:,2] = ξ_ll[num_days .== x,:]
+    out[:,3] = ξ_uu[num_days .== x,:]
+
+    
+    return out
+    
+ 
+end
+
+get_value(Date(2021, 08, 05))
+
+
+    
