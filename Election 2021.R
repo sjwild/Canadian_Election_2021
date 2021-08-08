@@ -492,5 +492,9 @@ results_2019$Vote2019_BQ[is.na(results_2019$Vote2019_BQ)] <- 0.076
 results_2019$Vote2019_Other[is.na(results_2019$Vote2019_Other)] <- 0.025
 
 
+# Load shapefile
+library(sf)
+
+ridings <- st_read("lfed000b16a_e.shp")
 
 

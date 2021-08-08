@@ -63,7 +63,7 @@ y_mat_moe = Matrix(calc_moe.(y_mat, can_polls.SampleSize))
 start_election = Vector([.395, .319, .197, 0.047, 0.034])
 end_election = Vector([.331, .343, 0.16, 0.076, 0.065]) 
 #start_election = Vector([.395, .319, .197, 0.047, 0.034, .008])
-#end_election = Vector([.331, .343, 0.16, 0.076, 0.065, 0.25]) 
+#end_election = Vector([.331, .343, 0.16, 0.076, 0.065, 0.025]) 
 poll_date = convert.(Int64, can_polls.NumDays)
 poll_id = [1:size(can_polls, 1);]
 pollster_id = can_polls.pollster_id
@@ -171,8 +171,8 @@ n_iter = 750
 n_chains = 4
 
 
-#Random.seed!(4329)
-Random.seed!(53103)
+Random.seed!(4329)
+#Random.seed!(53103)
 Turing.setadbackend(:reversediff)
 Turing.setrdcache(true)
 chns_election = sample(mod_election, NUTS(n_adapt, 0.8; max_depth = 12), MCMCThreads(), n_iter, n_chains)
@@ -186,7 +186,7 @@ save("turing_model_can_election.jld", "chns_election", chns_election)
 ξ_gq = generated_quantities(mod_election, chns_election)
 
 rs = n_iter * n_chains
-ξ = Array{Float64}(undef, (rs, N_days, N_parties))
+ξ = Array{Float64}(undef, (rs, N_days, N_parties+1))
 
 for i in 1:rs
     tmp = collect(ξ_gq[i])
@@ -194,15 +194,16 @@ for i in 1:rs
         for p in 1:N_parties
         ξ[i, j, p] = tmp[j, p]
         end
+        ξ[i, j, N_parties + 1] = 1 - sum(ξ[i, j, 1:N_parties])
     end
 end
 
-ξ_ll = Matrix{Float64}(undef, (N_days, N_parties))
-ξ_m = Matrix{Float64}(undef, (N_days, N_parties))
-ξ_uu = Matrix{Float64}(undef, (N_days, N_parties))
+ξ_ll = Matrix{Float64}(undef, (N_days, N_parties+1))
+ξ_m = Matrix{Float64}(undef, (N_days, N_parties+1))
+ξ_uu = Matrix{Float64}(undef, (N_days, N_parties+1))
 
 for j in 1:N_days
-    for p in 1:N_parties
+    for p in 1:(N_parties+1)
         ξ_ll[j,p] = quantile(ξ[: ,j, p], 0.025)
         ξ_m[j,p] = quantile(ξ[: ,j, p], 0.50)
         ξ_uu[j,p] = quantile(ξ[: ,j, p], 0.975)
@@ -212,20 +213,21 @@ end
 
 # Plot ξ and polls over time
 xi_days = election_day_2015 .+ Dates.Day.(1:N_days) .- Dates.Day(1)
-colours = [:red, :blue, :orange, :cyan, :green]
-#colours = [:red, :blue, :orange, :cyan, :green, :purple]
+#colours = [:red, :blue, :orange, :cyan, :green]
+colours = [:red, :blue, :orange, :cyan, :green, :purple]
+parties_other = ["LPC", "CPC", "NDP", "BQ", "GPC", "Other"]
 
 
 plt = plot(size = (750, 500), legend = :topright, fontfamily = :Courier, left_margin = 10mm, bottom_margin = 15mm, ylabel = "Vote intention (%)")
 ylims!(plt, (0.0, 0.6))
 for i in 1:length(colours)
-    scatter!(plt, can_polls.poll_date, can_polls[:, parties[i]], label = parties[i], mc = colours[i])
+    scatter!(plt, can_polls.poll_date, can_polls[:, parties_other[i]], label = parties_other[i], mc = colours[i])
     plot!(plt, xi_days, ξ_m[:,i], ribbon = (ξ_m[:,i] - ξ_ll[:,i], ξ_uu[:,i] - ξ_m[:,i]), 
           label = nothing, fc = colours[i], lc = colours[i], lw = 2)
 end
 
 title!(plt, "Estimated vote intention of Canadian voters:\n2015 to 2021", title_align= :left, titlefontsize = 12)
-annotate!(plt, xi_days[end], -0.08, StatsPlots.text("Source: Wikipedia. Analysis by sjwild.github.io\nUpdated Aug. 5, 2021", :lower, :right, 8, :grey))
+annotate!(plt, xi_days[end], -0.08, StatsPlots.text("Source: Wikipedia. Analysis by sjwild.github.io\nUpdated Aug. 8, 2021", :lower, :right, 8, :grey))
 yticks!(plt, [0.0, 0.1, 0.2, 0.3, 0.4, 0.5], 
              ["0", "10", "20", "30", "40", "50"])
 
@@ -266,7 +268,7 @@ for i in 1:length(parties)
 end
 
 annotate!(plt_house[5], .1, -2.0, 
-          StatsPlots.text("Source: Wikipedia. Analysis by sjwild.github.io\nUpdated Aug. 5, 2021", 
+          StatsPlots.text("Source: Wikipedia. Analysis by sjwild.github.io\nUpdated Aug. 8, 2021", 
           :lower, :right, 8, :grey))
 
 title = plot(title = "House effects: 2015 to 2021", titlefontsize = 16,
@@ -293,17 +295,17 @@ plt_2019 = plot(size = (750, 500), legend = :topright, fontfamily = :Courier, le
 ylims!(plt_2019, (0.0, 0.6))
 for i in 1:length(colours)
     scatter!(plt_2019, can_polls.poll_date[can_polls.poll_date .≥ Date(2019, 10, 21)], 
-             can_polls[can_polls.poll_date .≥ Date(2019, 10, 21), parties[i]], 
-             label = parties[i], mc = colours[i])
-    plot!(plt_2019, num_days[num_days .≥ Date(2019, 10, 21)], 
-          ξ_m[num_days .≥ Date(2019, 10, 21), i], 
-          ribbon = (ξ_m[num_days .≥ Date(2019, 10, 21), i] - ξ_ll[num_days .≥ Date(2019, 10, 21), i], 
-                    ξ_uu[num_days .≥ Date(2019, 10, 21), i] - ξ_m[num_days .≥ Date(2019, 10, 21), i]), 
+             can_polls[can_polls.poll_date .≥ Date(2019, 10, 21), parties_other[i]], 
+             label = parties_other[i], mc = colours[i])
+    plot!(plt_2019, xi_days[xi_days .≥ Date(2019, 10, 21)], 
+          ξ_m[xi_days .≥ Date(2019, 10, 21), i], 
+          ribbon = (ξ_m[xi_days .≥ Date(2019, 10, 21), i] - ξ_ll[xi_days .≥ Date(2019, 10, 21), i], 
+                    ξ_uu[xi_days .≥ Date(2019, 10, 21), i] - ξ_m[xi_days .≥ Date(2019, 10, 21), i]), 
                     label = nothing, fc = colours[i], lc = colours[i], lw = 2)
 end
 
 title!(plt_2019, "Estimated vote intention of Canadian voters:\n2019 to 2021", title_align= :left, titlefontsize = 12)
-annotate!(plt_2019, xi_days[end], -0.08, StatsPlots.text("Source: Wikipedia. Analysis by sjwild.github.io\nUpdated Aug. 5, 2021", :lower, :right, 8, :grey))
+annotate!(plt_2019, xi_days[end], -0.08, StatsPlots.text("Source: Wikipedia. Analysis by sjwild.github.io\nUpdated Aug. 8, 2021", :lower, :right, 8, :grey))
 yticks!(plt_2019, [0.0, 0.1, 0.2, 0.3, 0.4, 0.5], 
              ["0", "10", "20", "30", "40", "50"])
 
@@ -311,11 +313,11 @@ savefig(plt_2019, "can_vote_intention_2019_2021.png")
 
 function get_value(x)
 
-    out = Matrix{Float64}(undef, 5, 3)
+    out = Matrix{Float64}(undef, 6, 3)
 
-    out[:,1] = ξ_m[num_days .== x,:]
-    out[:,2] = ξ_ll[num_days .== x,:]
-    out[:,3] = ξ_uu[num_days .== x,:]
+    out[:,1] = ξ_m[xi_days .== x,:]
+    out[:,2] = ξ_ll[xi_days .== x,:]
+    out[:,3] = ξ_uu[xi_days .== x,:]
 
     
     return out
@@ -326,4 +328,4 @@ end
 get_value(Date(2021, 08, 05))
 
 
-    
+
