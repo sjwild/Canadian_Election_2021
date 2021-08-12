@@ -23,8 +23,24 @@ function extract_params(chn::Chains, param::String)
     uu = [quantile(tmp[:,i], 0.975) for i in 1:size(tmp, 2)]
 
     return ll, m, uu
+    
 end
 
+function get_value(x)
+
+    out = Matrix{Float64}(undef, 6, 3)
+
+    out[:,1] = ξ_m[xi_days .== x,:]
+    out[:,2] = ξ_ll[xi_days .== x,:]
+    out[:,3] = ξ_uu[xi_days .== x,:]
+
+    return out
+ 
+end
+
+# for Plots
+updated_date = "Aug. 12, 2021"
+day_title = "August 12, 2021"
 
 
 # Dates
@@ -227,7 +243,7 @@ for i in 1:length(colours)
 end
 
 title!(plt, "Estimated vote intention of Canadian voters:\n2015 to 2021", title_align= :left, titlefontsize = 12)
-annotate!(plt, xi_days[end], -0.08, StatsPlots.text("Source: Wikipedia. Analysis by sjwild.github.io\nUpdated Aug. 8, 2021", :lower, :right, 8, :grey))
+annotate!(plt, xi_days[end], -0.08, StatsPlots.text("Source: Wikipedia. Analysis by sjwild.github.io\nUpdated $updated_date", :lower, :right, 8, :grey))
 yticks!(plt, [0.0, 0.1, 0.2, 0.3, 0.4, 0.5], 
              ["0", "10", "20", "30", "40", "50"])
 
@@ -268,7 +284,7 @@ for i in 1:length(parties)
 end
 
 annotate!(plt_house[5], .1, -2.0, 
-          StatsPlots.text("Source: Wikipedia. Analysis by sjwild.github.io\nUpdated Aug. 8, 2021", 
+          StatsPlots.text("Source: Wikipedia. Analysis by sjwild.github.io\nUpdated $updated_date", 
           :lower, :right, 8, :grey))
 
 title = plot(title = "House effects: 2015 to 2021", titlefontsize = 16,
@@ -305,27 +321,32 @@ for i in 1:length(colours)
 end
 
 title!(plt_2019, "Estimated vote intention of Canadian voters:\n2019 to 2021", title_align= :left, titlefontsize = 12)
-annotate!(plt_2019, xi_days[end], -0.08, StatsPlots.text("Source: Wikipedia. Analysis by sjwild.github.io\nUpdated Aug. 8, 2021", :lower, :right, 8, :grey))
+annotate!(plt_2019, xi_days[end], -0.08, StatsPlots.text("Source: Wikipedia. Analysis by sjwild.github.io\nUpdated $updated_date", :lower, :right, 8, :grey))
 yticks!(plt_2019, [0.0, 0.1, 0.2, 0.3, 0.4, 0.5], 
              ["0", "10", "20", "30", "40", "50"])
 
 savefig(plt_2019, "can_vote_intention_2019_2021.png")
 
-function get_value(x)
 
-    out = Matrix{Float64}(undef, 6, 3)
-
-    out[:,1] = ξ_m[xi_days .== x,:]
-    out[:,2] = ξ_ll[xi_days .== x,:]
-    out[:,3] = ξ_uu[xi_days .== x,:]
-
-    
-    return out
-    
- 
+plt_dens = plot(size = (750, 500), 
+                title = "Estimated vote intention: $day_title",
+                title_align= :left, bottom_margin = 15mm, showaxis = :x,
+                y_ticks = nothing, fontfamily = :Courier)
+for i in 1:(N_parties + 1)
+    StatsPlots.density!(plt_dens, ξ[:, xi_days .== Date(2021, 08, 12), i], 
+                        label = parties_other[i], fill = (0, .2, colours[i]),
+                        lc = colours[i], lw = 2)
 end
 
-get_value(Date(2021, 08, 05))
+annotate!(plt_dens, .43, -22, StatsPlots.text("Source: Wikipedia. Analysis by sjwild.github.io\nUpdated $updated_date", :lower, :right, 8, :grey))
+xticks!(plt_dens, [0.0, 0.1, 0.2, 0.3, 0.4, 0.5], 
+             ["0", "10", "20", "30", "40", "50"])
+xlabel!(plt_dens, "Percent")
 
 
+plt_dens
+
+savefig(plt_dens, "can_vote_intention_on_election_date.png")
+
+get_value(Date(2021, 08, 12))
 

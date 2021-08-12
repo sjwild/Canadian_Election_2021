@@ -19,18 +19,20 @@ The Julia model is run using Turing.jl. The Turing model is coded using a differ
 The predictions for voting intention (that is, for the period after 2019-10-21, the date of 2019 Canadian election) assume that the polling errors are the same after the election as before it. That may or may not be true. I suspect that polling errors are correlated between periods.
 
 ## Vote intention
-As of August 8, 2021, these are the estimated vote shares based on Canadian polls up to August 3, 2021:
+As of August 12, 2021, these are the estimated vote shares based on Canadian polls up to August 11, 2021:
 
 |**Party**    | **Vote share**  | **95% bounds**     |
 |-------------|:---------------:|:------------------:|
-|**LPC**      | 37.8%           | (35.9%, 39.7%)     |
-|**CPC**      | 30.4%           | (28.9%, 31.9%)     |
-|**NDP**      | 17.6%           | (16.1%, 19.1%)     |
-|**BQ**       | 7.5%            | (6.7%, 8.2%)       |
-|**GPC**      | 3.9%            | (3.0%, 4.8%)       |
-|**Other**    | 2.8%            | (1.8%, 4.1%)       |
+|**LPC**      | 38.1%           | (36.6%, 39.7%)     |
+|**CPC**      | 30.5%           | (29.2%, 31.8%)     |
+|**NDP**      | 17.3%           | (16.0%, 18.7%)     |
+|**BQ**       | 7.0%            | (6.3%, 7.7%)       |
+|**GPC**      | 3.9%            | (3.1%, 4.7%)       |
+|**Other**    | 3.1%            | (1.9%, 4.3%)       |
 
+![alt text](https://github.com/sjwild/Canandian_Election_2021/raw/main/can_vote_intention_on_election_date.png "Density plot of estimated vote share per party.")
 
+Overall, vote intention has been relatively stable since the last federal election. There was a bump in support for the Liberal Party of Canada, but that increase in support has dropped. 
 
 ![alt text](https://github.com/sjwild/Canandian_Election_2021/raw/main/can_vote_intention_2019_2021.png "Vote share of Canadian parties from 2019 to 2021.")
 
@@ -40,7 +42,7 @@ As of August 8, 2021, these are the estimated vote shares based on Canadian poll
 
 
 ## House effects
-House effects vary, but in general firms tended to overestimate NDP and Green Party vote share while underestimating CPC and BQ vote share. 
+House effects vary, but in general firms tended to overestimate NDP and Green Party vote share while underestimating LPC, CPC, and BQ vote share. 
 
 ![alt text](https://github.com/sjwild/Canandian_Election_2021/raw/main/house_effects_pollsters.png "House effects of Canadian polling firms from 2015 to 2021.")
 
