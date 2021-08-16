@@ -23,16 +23,16 @@ As of August 12, 2021, these are the estimated vote shares based on Canadian pol
 
 |**Party**    | **Vote share**  | **95% bounds**     |
 |-------------|:---------------:|:------------------:|
-|**LPC**      | 38.1%           | (36.6%, 39.7%)     |
-|**CPC**      | 30.5%           | (29.2%, 31.8%)     |
-|**NDP**      | 17.3%           | (16.0%, 18.7%)     |
+|**LPC**      | 36.5%           | (34.6%, 38.2%)     |
+|**CPC**      | 30.8%           | (29.3%, 32.3%)     |
+|**NDP**      | 17.6%           | (16.0%, 19.1%)     |
 |**BQ**       | 7.0%            | (6.3%, 7.7%)       |
-|**GPC**      | 3.9%            | (3.1%, 4.7%)       |
-|**Other**    | 3.1%            | (1.9%, 4.3%)       |
+|**GPC**      | 4.1%            | (3.1%, 5.1%)       |
+|**Other**    | 4.4%            | (3.6%, 5.2%)       |
 
 ![alt text](https://github.com/sjwild/Canandian_Election_2021/raw/main/can_vote_intention_on_election_date.png "Density plot of estimated vote share per party.")
 
-Overall, vote intention has been relatively stable since the last federal election. There was a bump in support for the Liberal Party of Canada, but that increase in support has dropped. 
+Overall, vote intention has been relatively stable since the last federal election. There was a bump in support for the Liberal Party of Canada at the beginning of the pandemic, but that increase in support has dropped. 
 
 ![alt text](https://github.com/sjwild/Canandian_Election_2021/raw/main/can_vote_intention_2019_2021.png "Vote share of Canadian parties from 2019 to 2021.")
 

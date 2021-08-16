@@ -39,15 +39,15 @@ function get_value(x)
 end
 
 # for Plots
-updated_date = "Aug. 12, 2021"
-day_title = "August 12, 2021"
+updated_date = "Aug. 14, 2021"
+day_title = "August 14, 2021"
 
 
 # Dates
 dateformat = DateFormat("y-m-d")
 election_day_2015 = Date(2015, 10, 19)
 election_day_2019 = Date(2019, 10, 21)
-election_day_2021 = Date(2021, 09, 30)
+election_day_2021 = Date(2021, 09, 20)
 
 # Load pre-cleaned polls
 can_polls = CSV.read("can_polls2.csv", DataFrame; missingstring ="NA")
@@ -66,8 +66,8 @@ can_polls.poll_date = election_day_2015 .+ Dates.Day.(can_polls.NumDays) .- Date
 
 
 # Prep data for model
-parties = ["LPC", "CPC", "NDP", "BQ", "GPC"]
-#parties = ["LPC", "CPC", "NDP", "BQ", "GPC", "Other"]
+#parties = ["LPC", "CPC", "NDP", "BQ", "GPC"]
+parties = ["LPC", "CPC", "NDP", "BQ", "GPC", "Other"]
 election_2019 = Dates.value(election_day_2019 - election_day_2015) + 1
 N_days = Dates.value(election_day_2021 - election_day_2015) + 1
 N_polls = size(can_polls, 1)
@@ -76,10 +76,10 @@ N_parties = length(parties)
 N_modes = length(unique(can_polls.mode_id))
 y_mat = Matrix(can_polls[:, parties])
 y_mat_moe = Matrix(calc_moe.(y_mat, can_polls.SampleSize))
-start_election = Vector([.395, .319, .197, 0.047, 0.034])
-end_election = Vector([.331, .343, 0.16, 0.076, 0.065]) 
-#start_election = Vector([.395, .319, .197, 0.047, 0.034, .008])
-#end_election = Vector([.331, .343, 0.16, 0.076, 0.065, 0.025]) 
+#start_election = Vector([.395, .319, .197, 0.047, 0.034])
+#end_election = Vector([.331, .343, 0.16, 0.076, 0.065]) 
+start_election = Vector([.395, .319, .197, 0.047, 0.034, .008])
+end_election = Vector([.331, .343, 0.16, 0.076, 0.065, 0.025]) 
 poll_date = convert.(Int64, can_polls.NumDays)
 poll_id = [1:size(can_polls, 1);]
 pollster_id = can_polls.pollster_id
@@ -113,8 +113,9 @@ mode_id = Vector(can_polls.mode_id)
     # Omega and Rho for non-centered parameterization
     z_ω ~ filldist(Normal(0, 1), N_parties, (N_days - 2))
     ω ~ filldist(truncated(Normal(0, 0.005), 0, Inf), N_parties)
-    ρ ~ LKJ(N_parties, 2.0)
-
+    #z_ρ ~ filldist(Normal(0, 1), N_parties)    
+    #ρ ~ LKJ(N_parties, 2.0)
+    ρ ~ MvNormal(zeros(N_parties), ω)
 
     # House effects
     δ ~ filldist(Normal(0, 0.05), N_pollsters, N_parties)
@@ -127,7 +128,12 @@ mode_id = Vector(can_polls.mode_id)
 
 
     # Transform parameters
-    Ω = LinearAlgebra.diagm(ω) * ρ * LinearAlgebra.diagm(ω) * z_ω
+    #Ω = LinearAlgebra.diagm(ω) * ρ * LinearAlgebra.diagm(ω) * z_ω
+    #ω1 = ω * z_ρ  
+    ρ ~ MvNormal(zeros(N_parties), ω)
+
+    Ω = diagm(ρ) * z_ω
+
 
     ξ[1, :] = start_election
     ξ[election_2019, :] = end_election    
@@ -182,13 +188,13 @@ mod_election = state_space_elections(y_mat,
 
 
 # Set iters and ids
-n_adapt = 750
+n_adapt = 1500
 n_iter = 750
 n_chains = 4
 
 
 Random.seed!(4329)
-#Random.seed!(53103)
+#Random.seed!(16102)
 Turing.setadbackend(:reversediff)
 Turing.setrdcache(true)
 chns_election = sample(mod_election, NUTS(n_adapt, 0.8; max_depth = 12), MCMCThreads(), n_iter, n_chains)
@@ -202,7 +208,7 @@ save("turing_model_can_election.jld", "chns_election", chns_election)
 ξ_gq = generated_quantities(mod_election, chns_election)
 
 rs = n_iter * n_chains
-ξ = Array{Float64}(undef, (rs, N_days, N_parties+1))
+ξ = Array{Float64}(undef, (rs, N_days, N_parties))
 
 for i in 1:rs
     tmp = collect(ξ_gq[i])
@@ -210,16 +216,16 @@ for i in 1:rs
         for p in 1:N_parties
         ξ[i, j, p] = tmp[j, p]
         end
-        ξ[i, j, N_parties + 1] = 1 - sum(ξ[i, j, 1:N_parties])
+        #ξ[i, j, N_parties + 1] = 1 - sum(ξ[i, j, 1:N_parties])
     end
 end
 
-ξ_ll = Matrix{Float64}(undef, (N_days, N_parties+1))
-ξ_m = Matrix{Float64}(undef, (N_days, N_parties+1))
-ξ_uu = Matrix{Float64}(undef, (N_days, N_parties+1))
+ξ_ll = Matrix{Float64}(undef, (N_days, N_parties))
+ξ_m = Matrix{Float64}(undef, (N_days, N_parties))
+ξ_uu = Matrix{Float64}(undef, (N_days, N_parties))
 
 for j in 1:N_days
-    for p in 1:(N_parties+1)
+    for p in 1:(N_parties)
         ξ_ll[j,p] = quantile(ξ[: ,j, p], 0.025)
         ξ_m[j,p] = quantile(ξ[: ,j, p], 0.50)
         ξ_uu[j,p] = quantile(ξ[: ,j, p], 0.975)
@@ -332,13 +338,13 @@ plt_dens = plot(size = (750, 500),
                 title = "Estimated vote intention: $day_title",
                 title_align= :left, bottom_margin = 15mm, showaxis = :x,
                 y_ticks = nothing, fontfamily = :Courier)
-for i in 1:(N_parties + 1)
+for i in 1:(N_parties)
     StatsPlots.density!(plt_dens, ξ[:, xi_days .== Date(2021, 08, 12), i], 
                         label = parties_other[i], fill = (0, .2, colours[i]),
                         lc = colours[i], lw = 2)
 end
 
-annotate!(plt_dens, .43, -22, StatsPlots.text("Source: Wikipedia. Analysis by sjwild.github.io\nUpdated $updated_date", :lower, :right, 8, :grey))
+annotate!(plt_dens, .41, -22, StatsPlots.text("Source: Wikipedia. Analysis by sjwild.github.io\nUpdated $updated_date", :lower, :right, 8, :grey))
 xticks!(plt_dens, [0.0, 0.1, 0.2, 0.3, 0.4, 0.5], 
              ["0", "10", "20", "30", "40", "50"])
 xlabel!(plt_dens, "Percent")
@@ -348,5 +354,60 @@ plt_dens
 
 savefig(plt_dens, "can_vote_intention_on_election_date.png")
 
-get_value(Date(2021, 08, 12))
+get_value(Date(2021, 08, 14))
+
+
+
+
+
+
+
+
+#### BYM2 model to estimate votes by riding ####
+
+# Helper functions
+function convolve_re(ϕ::Vector, θ::Vector, id_num::Vector, ρ, sf)
+
+    re = sqrt(1 - ρ) .* θ[id_num] .+ sqrt(ρ / sf) .* ϕ[id_num]
+
+    return re
+
+end
+
+function icar_adjustment(ϕ::Vector, node1::Vector, node2::Vector)
+
+    x = ϕ[node1] - ϕ[node2]
+
+    return -0.5 * dot(x, x)
+
+end
+
+
+@model function bym2(N, N_edges, node1, node2, y, x, scaling_factor, id_num)
+
+    # priors
+    α ~ Normal(0, 1)
+    β ~ Normal(0, 1)
+
+    σ ~ truncated(Normal(0, 1), 0, Inf)
+    τ ~ truncated(Normal(0, 1), 0, Inf)
+    ϕ ~ filldist(Uniform(-1, 1), N)
+    sum_ϕ ~ Normal(0, 0.0001 * N)
+  
+    θ ~ filldist(Normal(0, 1), N)
+
+    ρ ~ Beta(0.5, 0.5)
+    
+    # model
+    sum_ϕ = sum(ϕ)
+    convolved_re = convolve_re(ϕ, θ, id_num, ρ, scaling_factor)
+
+
+    Turing.@addlogprob! icar_adjustment(ϕ, node1, node2)
+    μ =  x .+ convolved_re .* τ
+    y ~ MvNormal(μ, σ)
+
+    return λ
+
+end
 
