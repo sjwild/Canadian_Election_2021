@@ -1,0 +1,276 @@
+using RCall
+using Dates
+using Missing 
+using DataFrames
+
+# Set some global variables
+
+# for Plots
+updated_date = "Aug. 14, 2021"
+day_title = "August 14, 2021"
+dateformat = DateFormat("y-m-d")
+
+
+
+# custom functions
+function clean_mode(x::Vector{String})
+
+    xmode = Vector{String}(undef, length(x))
+
+    for i in 1:length(x)
+  
+        if contains(x[i], "online/telephone")
+            xmode[i] = "Online - telephone"
+        elseif contains(x[i], "telephone/IVR")
+            xmode[i] = "telephone - IVR"
+        elseif contains(x[i], "IVR") == true  & 
+            contains(x[i], "telephone - IVR") == false
+            xmode[i] = "IVR"
+        elseif contains(x[i], "online") == true &
+            contains(x[i], "Online - telephone") == false
+            xmode[i] = "online"
+        elseif contains(x[i], "telephone") == true &
+            contains(x[i], "telephone - IVR") == false &
+            contains(x[i], "Online - telephone") == false
+            xmode[i] = "telephone"
+            
+        end
+
+    end
+    
+  return xmode
+  
+end
+
+
+function clean_samplesize(x::Vector)
+
+    x = replace.(x, " (1/3)" => "")
+    x = replace.(x, " (2/3)" => "")
+    x = replace.(x, " (3/3)" => "")
+    x = replace.(x, " (1/2)" => "")
+    x = replace.(x, " (2/2)" => "")
+    x = replace.(x, " (1/4)" => "")
+    x = replace.(x, "," => "")
+    x = parse.(Int, x)
+
+    return x
+
+end
+
+
+function convert_numeric(x::DataFrame, var::Vector)
+
+    for i in 1:length(var)
+        x[:, var[i]] = parse.(Float64, x[:, var[i]])
+    end
+
+end
+
+
+function calc_moe(x, ss)
+    return  sqrt(x * (1-x) / ss)
+
+end
+
+
+function extract_params(chn::Chains, param::String)
+
+    tmp = chn |> DataFrame
+    tmp = tmp[:, startswith.(names(tmp), param)]
+    ll = [quantile(tmp[:,i], 0.025) for i in 1:size(tmp, 2)]
+    m = [quantile(tmp[:,i], 0.5) for i in 1:size(tmp, 2)]
+    uu = [quantile(tmp[:,i], 0.975) for i in 1:size(tmp, 2)]
+
+    return ll, m, uu
+    
+end
+
+
+function get_value(x)
+
+    out = Matrix{Float64}(undef, 6, 3)
+
+    out[:,1] = ξ_m[xi_days .== x,:]
+    out[:,2] = ξ_ll[xi_days .== x,:]
+    out[:,3] = ξ_uu[xi_days .== x,:]
+
+    return out
+ 
+end
+
+
+
+
+# scrape data from web. Use R, as rvest makes it easy
+
+R"""
+library(rvest)
+
+wiki <- read_html("https://en.wikipedia.org/wiki/Opinion_polling_for_the_2019_Canadian_federal_election")
+wiki_tables <- html_table(wiki, 
+                          fill = TRUE, 
+                          header = TRUE)
+
+
+# Campaign period polls
+campaign_polls <- wiki_tables[[2]]
+
+# Pre-campaign polls
+pre_polls <- wiki_tables[[3]]
+
+#Pre-2021 polls
+wiki_2021 <- read_html("https://en.wikipedia.org/wiki/Opinion_polling_for_the_44th_Canadian_federal_election")
+wiki_tables_2021 <- html_table(wiki_2021, 
+                               fill = TRUE, 
+                               header = TRUE)
+
+
+# Pre campaign period polls for 2021 election 
+pre_2021_polls <- wiki_tables_2021[[3]]
+
+# Campaing polls for pre-2021 election
+campaign_2021_polls <- wiki_tables_2021[[2]]
+
+"""
+
+
+
+# bring into julia
+campaign_polls = @rget campaign_polls
+pre_polls = @rget pre_polls
+pre_2021_polls = @rget pre_2021_polls
+campaign_2021_polls = @rget campaign_2021_polls
+
+# Polling firms for subsetting
+polling_firms =  ["Abacus Data", "Leger", "Mainstreet Research", "Nanos Research",
+                  "Campaign Research", "Innovative Research", "EKOS", "Angus Reid",
+                  "Ipsos", "DART/Maru", "Forum Research", "Research Co.",
+                  "Pollara", "Insights West", "Stratcom", "Counsel", "Delphi Polling"] 
+parties = [:LPC, :CPC, :NDP, :BQ, :GPC]
+
+
+
+# clean 2019 election campaign polls
+dropmissing!(campaign_polls, :LPC)
+campaign_polls.Polling_firm = campaign_polls[:, "Polling firm"]
+campaign_polls = campaign_polls[in(polling_firms).(campaign_polls.Polling_firm), :]
+campaign_polls.PollDate = campaign_polls[:, "Last dateof polling[1]"]
+campaign_polls.SampleSize = campaign_polls[:, "Samplesize[3]"]
+campaign_polls.SampleSize = clean_samplesize(campaign_polls.SampleSize)
+campaign_polls.mode = clean_mode(campaign_polls[:, "Polling method[4]"])
+
+
+
+# clean 2019 pre-campaign polls
+dropmissing!(pre_polls, :LPC)
+pre_polls.Polling_firm = pre_polls[:, "Polling firm"]
+pre_polls = pre_polls[in(polling_firms).(pre_polls.Polling_firm), :]
+pre_polls.PollDate = pre_polls[:, "Last dateof polling[1]"]
+pre_polls.SampleSize = pre_polls[:, "Samplesize[3]"]
+pre_polls.SampleSize = clean_samplesize(pre_polls.SampleSize)
+pre_polls.mode = clean_mode(pre_polls[:, "Polling method[4]"])
+pre_polls.LPC = parse.(Float64, pre_polls.LPC)
+pre_polls.CPC = parse.(Float64, pre_polls.CPC)
+pre_polls.NDP = parse.(Float64, pre_polls.NDP)
+pre_polls.BQ = parse.(Float64, pre_polls.BQ)
+pre_polls.GPC = ifelse.(pre_polls.GPC .== "", missing, pre_polls.GPC)
+pre_polls.GPC = passmissing(parse).(Float64, pre_polls.GPC)
+
+
+
+# Clean 2021 pre-campaign polls
+dropmissing!(pre_2021_polls, :LPC)
+pre_2021_polls.Polling_firm = pre_2021_polls[:, "Polling firm"]
+pre_2021_polls = pre_2021_polls[in(polling_firms).(pre_2021_polls.Polling_firm), :]
+pre_2021_polls.PollDate = pre_2021_polls[:, "Last dateof polling[1]"]
+pre_2021_polls.SampleSize = pre_2021_polls[:, "Samplesize[4]"]
+pre_2021_polls.SampleSize = clean_samplesize(pre_2021_polls.SampleSize)
+pre_2021_polls.mode = clean_mode(pre_2021_polls[:, "Polling method[5]"])
+pre_2021_polls.LPC = parse.(Float64, pre_2021_polls.LPC)
+pre_2021_polls.CPC = parse.(Float64, pre_2021_polls.CPC)
+pre_2021_polls.NDP = parse.(Float64, pre_2021_polls.NDP)
+pre_2021_polls.BQ = ifelse.(pre_2021_polls.BQ .== "N/A", missing, pre_2021_polls.BQ)
+pre_2021_polls.BQ = passmissing(parse).(Float64, pre_2021_polls.BQ)
+
+
+# Clean 2021 pre-campaign polls
+dropmissing!(campaign_2021_polls, :LPC)
+campaign_2021_polls.Polling_firm = campaign_2021_polls[:, "Polling firm"]
+campaign_2021_polls = campaign_2021_polls[in(polling_firms).(campaign_2021_polls.Polling_firm), :]
+campaign_2021_polls.PollDate = campaign_2021_polls[:, "Last dateof polling[1]"]
+campaign_2021_polls.SampleSize = campaign_2021_polls[:, "Samplesize[4]"]
+campaign_2021_polls.SampleSize = clean_samplesize(campaign_2021_polls.SampleSize)
+campaign_2021_polls.mode = clean_mode(campaign_2021_polls[:, "Polling method[5]"])
+
+
+
+
+
+
+# Combine polls into one DataFrame
+subset_vars = ["Polling_firm", "PollDate", "LPC", "CPC", "NDP", "BQ", "GPC", 
+               "SampleSize", "mode"]
+can_polls = vcat(campaign_polls[:, subset_vars], pre_polls[:, subset_vars], 
+                  pre_2021_polls[:, subset_vars], campaign_2021_polls[:, subset_vars])
+
+
+# drop missing polls because it makes my life easier
+dropmissing!(can_polls)
+
+
+# Dates
+election_day_2015 = Date(2015, 10, 19)
+election_day_2019 = Date(2019, 10, 21)
+election_day_2021 = Date(2021, 09, 20)
+can_polls.PollDate = replace.(can_polls.PollDate, " " => "-")
+can_polls.PollDate = replace.(can_polls.PollDate, "," => "")
+can_polls.PollDate = Date.(can_polls.PollDate, "U-d-y")
+can_polls.NumDays =  Dates.value.(can_polls.PollDate .- election_day_2015 .+ Dates.Day(1))
+
+
+# Convert poll percentages to proportions
+parties_subtract = [:LPC, :CPC, :NDP, :BQ, :GPC]
+can_polls[:, parties_subtract] = can_polls[:, parties_subtract] ./ 100
+can_polls[:, :Other] = [1 - sum(can_polls[i,parties_subtract]) for i in 1:size(can_polls, 1)]
+
+# Subset polls to remove :Others with a value of 0
+# If included, these polls will result in overestimation of support for other parties
+# Reason: A poll with 1000 respondents should reasonably have about 20 people voting "Other"
+can_polls = can_polls[can_polls.Other .> 0.0000, :]
+
+
+# Pollster id
+pollster_dict = Dict(key => idx for (idx, key) in enumerate(unique(can_polls.Polling_firm)))
+can_polls.pollster_id = [pollster_dict[i] for i in can_polls.Polling_firm]
+reverse_pollster = Dict(value => key for (key, value) in pollster_dict)
+
+
+# mode id
+mode_dict = Dict(key => idx for (idx, key) in enumerate(unique(can_polls.mode)))
+can_polls.mode_id = [mode_dict[i] for i in can_polls.mode]
+reverse_mode= Dict(value => key for (key, value) in mode_dict)
+
+
+
+
+# Prep data for model
+#parties = ["LPC", "CPC", "NDP", "BQ", "GPC"]
+parties = ["LPC", "CPC", "NDP", "BQ", "GPC", "Other"]
+election_2019 = Dates.value(election_day_2019 - election_day_2015) + 1
+N_days = Dates.value(election_day_2021 - election_day_2015) + 1
+N_polls = size(can_polls, 1)
+N_pollsters = length(unique(can_polls.pollster_id))
+N_parties = length(parties)
+N_modes = length(unique(can_polls.mode_id))
+y_mat = Matrix(can_polls[:, parties])
+y_mat_moe = Matrix(calc_moe.(y_mat, can_polls.SampleSize))
+#start_election = Vector([.395, .319, .197, 0.047, 0.034])
+#end_election = Vector([.331, .343, 0.16, 0.076, 0.065]) 
+start_election = Vector([.395, .319, .197, 0.047, 0.034, .008])
+end_election = Vector([.331, .343, 0.16, 0.076, 0.065, 0.025]) 
+poll_date = convert.(Int64, can_polls.NumDays)
+poll_id = [1:size(can_polls, 1);]
+pollster_id = can_polls.pollster_id
+mode_id = Vector(can_polls.mode_id)
+
