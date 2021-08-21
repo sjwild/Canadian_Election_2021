@@ -15,6 +15,7 @@ using PlotlyBase
 # Set some global variables for Plots
 updated_date = "Aug. 19, 2021"
 day_title = "August 19, 2021"
+update_date = Date(2021, 08, 18)
 value_date = Date(2021, 08, 19)
 dateformat = DateFormat("y-m-d")
 
@@ -270,6 +271,10 @@ can_polls.mode_id = [mode_dict[i] for i in can_polls.mode]
 reverse_mode= Dict(value => key for (key, value) in mode_dict)
 
 
+# write CSV for polls
+CSV.write("can_polls2.csv", can_polls)
+
+
 
 # Prep data for model
 #parties = ["LPC", "CPC", "NDP", "BQ", "GPC"]
@@ -394,8 +399,8 @@ mod_election = state_space_elections(y_mat,
 
 
 # Set iters
-n_adapt = 1500
-n_iter = 1000
+n_adapt = 1250
+n_iter = 750
 n_chains = 4
 
 # Define and run model
@@ -546,7 +551,7 @@ plt_dens = plot(size = (750, 500),
                 title_align= :left, bottom_margin = 12mm, showaxis = :x,
                 y_ticks = nothing, fontfamily = :Verdana)
 for i in 1:(N_parties)
-    StatsPlots.density!(plt_dens, ξ[:, xi_days .== Date(2021, 08, 12), i], 
+    StatsPlots.density!(plt_dens, ξ[:, xi_days .== update_date, i], 
                         label = parties_other[i], fill = (0, .2, colours[i]),
                         lc = colours[i], lw = 2)
 end
@@ -562,13 +567,32 @@ plt_dens
 savefig(plt_dens, "can_vote_intention_on_election_date.png")
 
 
+# Plt campaign period
+plt_campaign = plot(size = (750, 500), legend = :topright, fontfamily = :Verdana, left_margin = 10mm, bottom_margin = 15mm, ylabel = "Vote intention (%)")
+ylims!(plt_campaign, (0.0, 0.6))
+for i in 1:length(colours)
+    scatter!(plt_campaign, can_polls.PollDate[can_polls.PollDate .≥ Date(2021, 08, 15)], 
+             can_polls[can_polls.PollDate .≥ Date(2021, 08, 15), parties_other[i]], 
+             label = parties_other[i], mc = colours[i])
+    plot!(plt_campaign, xi_days[xi_days .≥ Date(2021, 08, 15)], 
+          ξ_m[xi_days .≥ Date(2021, 08, 15), i], 
+          ribbon = (ξ_m[xi_days .≥ Date(2021, 08, 15), i] - ξ_ll[xi_days .≥ Date(2021, 08, 15), i], 
+                    ξ_uu[xi_days .≥ Date(2021, 08, 15), i] - ξ_m[xi_days .≥ Date(2021, 08, 15), i]), 
+                    label = nothing, fc = colours[i], lc = colours[i], lw = 2)
+end
+
+title!(plt_campaign, "Estimated vote intention of Canadian voters:\nElection campaign 2021", title_align= :left, titlefontsize = 12)
+annotate!(plt_campaign, xi_days[end], -0.08, StatsPlots.text("Source: Wikipedia. Analysis by sjwild.github.io\nUpdated $updated_date", :lower, :right, 8, :grey))
+yticks!(plt_campaign, [0.0, 0.1, 0.2, 0.3, 0.4, 0.5], 
+             ["0", "10", "20", "30", "40", "50"])
+
+savefig(plt_campaign, "can_vote_intention_campaign_period.png")
+
+
+
 
 # Get values
 get_value(value_date)
-
-
-
-
 
 
 
