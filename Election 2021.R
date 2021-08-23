@@ -7,7 +7,9 @@ library(posterior)
 library(lubridate)
 library(ggdark)
 library(rvest)
-
+library(sf)
+library(spdep)
+library(INLA)
 
 setwd("~/Desktop/Election modelling")
 
@@ -38,6 +40,99 @@ clean_mode <- function(x){
 }
 
 
+clean_previous_years <- function(df, vote){
+  
+  # Summarize results by riding
+  df$RidingNumber <- df$Electoral.District.Number.Numéro.de.circonscription
+  df$Elected <- ifelse(df$Elected.Candidate.Indicator.Indicateur.du.candidat.élu == "Y",
+                                      1, 0)
+  df$Party <- df$Political.Affiliation.Name_English.Appartenance.politique_Anglais
+  df$Incumbent <- ifelse(df$Incumbent.Indicator.Indicateur_Candidat.sortant == "Y", 1, 0)
+  df$VoteCount <- df$Candidate.Poll.Votes.Count.Votes.du.candidat.pour.le.bureau
+  df <- df[, c("RidingNumber", "Party", "Elected", "Incumbent", "VoteCount")] 
+  
+  # Rename parties
+  df$Party[df$Party == "Liberal"] <- "LPC"
+  df$Party[df$Party == "Conservative"] <- "CPC"
+  df$Party[df$Party == "NDP-New Democratic Party"] <- "NDP"
+  df$Party[df$Party == "Bloc Québécois"] <- "BQ"
+  df$Party[df$Party == "Green Party"] <- "GPC"
+  df$Party <- ifelse(df$Party %in% parties, df$Party, "Other")
+  
+  #succumb to tidyverse style
+  results <- df %>% 
+    group_by(RidingNumber, Party) %>%
+    summarize(Elected = max(Elected),
+              Incumbent = max(Incumbent),
+              VoteCount = sum(VoteCount, na.rm = TRUE))
+  results <- results %>%
+    group_by(RidingNumber) %>%
+    mutate(VotePercent = VoteCount/sum(VoteCount))
+  
+  
+  results <- left_join(results, data.frame(Party = c("LPC", "CPC", "NDP", "BQ", "GPC", "Other"),
+                                                     Vote = vote),
+                            by = "Party")
+  
+  results <- pivot_wider(results[, c("RidingNumber", "VotePercent", "Vote", "Incumbent", "Party")],
+                              names_from = "Party", 
+                              values_from = c("VotePercent", "Vote", "Incumbent"))
+  
+  return(results)
+  
+}
+
+
+# To use Stan
+# Taken from https://github.com/stan-dev/example-models/blob/master/knitr/car-iar-poisson/nbdata4stan.R
+nb2graph = function(x) {
+  N = length(x);
+  n_links = 0;
+  for (i in 1:N) {
+    if (x[[i]][1] != 0) {
+      n_links = n_links + length(x[[i]]);
+    }
+  }
+  N_edges = n_links / 2;
+  node1 = vector(mode="numeric", length=N_edges);
+  node2 = vector(mode="numeric", length=N_edges);
+  idx = 0;
+  for (i in 1:N) {
+    if (x[[i]][1] > 0) {
+      for (j in 1:length(x[[i]])) {
+        n2 = unlist(x[[i]][j]);
+        if (i < n2) {
+          idx = idx + 1;
+          node1[idx] = i;
+          node2[idx] = n2;
+        }
+      }
+    }
+  }
+  return (list("N"=N,"N_edges"=N_edges,"node1"=node1,"node2"=node2));
+}
+
+get_scaling_factor = function(nbs) {
+  #Build the adjacency matrix
+  adj.matrix = sparseMatrix(i=nbs$node1,j=nbs$node2,x=1,symmetric=TRUE)
+  #The ICAR precision matrix (note! This is singular)
+  Q=  Diagonal(nbs$N, rowSums(adj.matrix)) - adj.matrix
+  
+  #Add a small jitter to the diagonal for numerical stability (optional but recommended)
+  Q_pert = Q + Diagonal(nbs$N) * max(diag(Q)) * sqrt(.Machine$double.eps)
+  
+  # Compute the diagonal elements of the covariance matrix subject to the
+  # constraint that the entries of the ICAR sum to zero.
+  #See the function help for further details.
+  Q_inv = inla.qinv(Q_pert, constr=list(A = matrix(1,1,nbs$N),e=0))
+  
+  #Compute the geometric mean of the variances, which are on the diagonal of Q.inv
+  return((mean(log(diag(Q_inv)))))
+}
+
+
+
+# theme for images
 theme_blog <- theme_minimal() +
   theme(plot.caption = element_text(colour = "grey50"),
         text = element_text(family = "Courier"),
@@ -47,6 +142,8 @@ theme_blog <- theme_minimal() +
         plot.subtitle  = element_text(face = "bold"),
         axis.line.x.bottom = element_line(colour = "grey50"),
         axis.line.y.left = element_line(colour = "grey50"))
+
+
 
 
 
@@ -146,7 +243,7 @@ wiki_tables_2023 <- html_table(wiki_2023,
 
 
 # Campaign period polls
-pre_2023_polls <- wiki_tables_2023[[2]]
+pre_2023_polls <- wiki_tables_2023[[3]]
 pre_2023_polls$Polling_firm <- pre_2023_polls$`Polling firm`
 pre_2023_polls$PollDate <- pre_2023_polls$`Last dateof polling[1]`
 pre_2023_polls$SampleSize <- str_remove_all(pre_2023_polls$`Samplesize[4]`, "\\([0-9]\\/[0-9]\\)")
@@ -197,12 +294,70 @@ pre_2023_polls$NumDays <- as.numeric(pre_2023_polls$PollDate - election_results$
 # Remove announcements
 pre_2023_polls <- subset(pre_2023_polls, !is.na(BQ))
 
+
+
+
+# Campaign period polls
+campaign_2023_polls <- wiki_tables_2023[[2]]
+campaign_2023_polls$Polling_firm <- campaign_2023_polls$`Polling firm`
+campaign_2023_polls$PollDate <- campaign_2023_polls$`Last dateof polling[1]`
+campaign_2023_polls$SampleSize <- str_remove_all(campaign_2023_polls$`Samplesize[4]`, "\\([0-9]\\/[0-9]\\)")
+campaign_2023_polls$SampleSize <- str_remove_all(campaign_2023_polls$SampleSize, ",")
+campaign_2023_polls$mode <- clean_mode(campaign_2023_polls$`Polling method[5]`)
+campaign_2023_polls <- campaign_2023_polls[, c("Polling_firm", "PollDate", parties, "SampleSize", "mode")]
+
+
+
+# Combine polls and subset
+campaign_2023_polls <- subset(campaign_2023_polls, Polling_firm != "")
+campaign_2023_polls <- subset(campaign_2023_polls, str_detect(campaign_2023_polls$Polling_firm, "election") == FALSE)
+campaign_2023_polls <- campaign_2023_polls[2:nrow(campaign_2023_polls),]
+
+# Sample size
+campaign_2023_polls$SampleSize <- str_remove_all(campaign_2023_polls$SampleSize, "\\([0-9]\\/[0-9]\\)")
+campaign_2023_polls$SampleSize <- str_remove_all(campaign_2023_polls$SampleSize, ",")
+
+
+#set.seed(10438174)
+#campaign_2023_polls$SampleSize[campaign_2023_polls$SampleSize == ""] <- sample(campaign_2023_polls$SampleSize, 1)
+
+# Convert to numeric
+campaign_2023_polls[,c(parties, "SampleSize")] <- sapply(campaign_2023_polls[,c(parties, "SampleSize")], as.numeric)
+campaign_2023_polls[,c(parties)] <- sapply(campaign_2023_polls[,parties], function(x) x / 100)
+
+
+# Calculate moe
+parties_moe <- paste0(parties, "_moe")
+for(i in 1:length(parties)){
+  x <- paste0(parties[i])
+  x_moe <- paste0(parties_moe[i])
+  
+  campaign_2023_polls[,x_moe] <- calc_moe(campaign_2023_polls[,x], campaign_2023_polls$SampleSize)
+  
+}
+
+
+campaign_2023_polls$Other <- 1 - (campaign_2023_polls$LPC + campaign_2023_polls$CPC + 
+                               campaign_2023_polls$NDP + campaign_2023_polls$BQ + campaign_2023_polls$GPC)
+campaign_2023_polls$Other_moe <- calc_moe(campaign_2023_polls$Other, campaign_2023_polls$SampleSize)
+
+
+# Dates
+campaign_2023_polls$PollDate <- mdy(campaign_2023_polls$PollDate)
+campaign_2023_polls$NumDays <- as.numeric(campaign_2023_polls$PollDate - election_results$PollDate[1]) + 1
+
+# Remove announcements
+campaign_2023_polls <- subset(campaign_2023_polls, !is.na(BQ))
+
+
+
+
 # New N_days, using Sept 30 as final date
-N_days_2021 <- as.numeric(ymd("2021-09-30") - election_results$PollDate[1]) + 1
+N_days_2021 <- as.numeric(ymd("2021-09-20") - election_results$PollDate[1]) + 1
 
 
 # Combine datasets
-can_polls2 <- rbind(can_polls, pre_2023_polls)
+can_polls2 <- rbind(can_polls, pre_2023_polls, campaign_2023_polls)
 can_polls2 <- can_polls2[complete.cases(can_polls2),]
 can_polls2 <- subset(can_polls2, Other > 0)
 
@@ -213,7 +368,11 @@ can_polls2$mode_id <- as.numeric(as.factor(can_polls2$mode))
 N_pollsters <- length(unique(can_polls2$pollster_id))
 N_modes <- length(unique(can_polls2$mode))
 
-
+# write CSV
+write.csv(can_polls2, file = "can_polls2.csv", 
+          row.names = FALSE)
+#write.csv(can_polls2, file = "/Users/stephenwild/Desktop/Canandian_Election_2021/can_polls2.csv",
+#          row.names = FALSE)
 
 # fit state space model for pooling the polls
 state_space_all <- cmdstan_model("state_space_all_parties_non_centered_prediction.stan")
@@ -268,6 +427,7 @@ house_draws <- as_draws_df(fit_all$draws("delta"))
 all_trend <- data.frame(mu = apply(all_draws[,1:(ncol(all_draws)-3)], 2, mean),
                         ll = apply(all_draws[,1:(ncol(all_draws)-3)], 2, function(x) quantile(x, 0.025)),
                         uu = apply(all_draws[,1:(ncol(all_draws)-3)], 2, function(x) quantile(x, 0.975)),
+                        sigma_obs = apply(all_draws[,1:(ncol(all_draws)-3)], 2, sd),
                         party = rep(parties_all, each = N_days_2021),
                         NumDays = rep(1:N_days_2021, length(parties_all)))
 house_effects <- data.frame(mu = apply(house_draws[,1:(ncol(house_draws) - 3)], 2, mean),
@@ -356,6 +516,7 @@ ggsave(plot = house_effect_plot, filename = "house_effects_2015_to_2021.png",
        height = 1500, width = 2000, units = "px")
 house_effect_plot
 
+all_trend[all_trend$PollDate == ymd("2021-08-07"),]
 #mode_effect_plot <- ggplot(mode_effects) +
 #  geom_pointrange(mapping = aes(x = mode,
 #                                y = mu,
@@ -390,7 +551,7 @@ ggplot(data.frame(X = sums)) +
   geom_density(mapping = aes(x = X))  +
   theme_blog
 
-
+all_trend[all_trend$PollDate == ymd("2021-08-17"),]
 
 # Results for all elections:
 raw_results <- data.frame(LPC = c(.331, .395, .189, .262, .302, .367, .408, .385, .413),
@@ -409,7 +570,13 @@ raw_results <- data.frame(LPC = c(.331, .395, .189, .262, .302, .367, .408, .385
                           PPC = c(1, 0, 0, 0, 0, 0, 0, 0, 0),
                           LPC_incumbent = c(1, 0, 0, 0, 1, 1, 1, 1, 0),
                           Election_year = c(2019, 2015, 2011, 2008, 2006, 2004, 2000, 1997, 1993),
-                          year_num = c(6, 5, 4, 3, 2, 1, NA, NA, NA))
+                          year_num = c(6, 5, 4, 3, 2, 1, NA, NA, NA),
+                          LPC_seats = c(157, 184, 34, 77, 103, 135, NA, NA, NA),
+                          CPC_seats = c(121, 99, 166, 143, 124, 99, NA, NA, NA),
+                          NDP_seats = c(24, 44, 103, 37, 29, 19, NA, NA, NA),
+                          BQ_seats = c(32, 10, 4, 49, 51, 54, NA, NA, NA),
+                          GPC_seats = c(3, 1, 1, 0, 0, 0, NA, NA, NA),
+                          Total_seats = c(338, 338, 308, 308, 308, 308, NA, NA, NA))
 raw_results$logtime <- log(raw_results$time)
 raw_results$Other <- (1 - raw_results$LPC -
                         raw_results$CPC -
@@ -421,6 +588,11 @@ raw_results$Other_pop <- (1 - raw_results$LPC_pop -
                         raw_results$NDP_pop -
                         raw_results$BQ_pop -
                         raw_results$GPC_pop)
+raw_results$Other_seats <- (raw_results$Total_seats - raw_results$LPC_seats -
+                              raw_results$CPC_seats -
+                              raw_results$NDP_seats -
+                              raw_results$BQ_seats -
+                              raw_results$GPC_seats)
 
 newdata = data.frame(logtime = log(24 + 46),
                      LPC_pop = .365,
@@ -440,61 +612,348 @@ newdata = data.frame(logtime = log(24 + 46),
 
 
 #### Load seat data to estimate vote by district ####
-file_list <- list.files(path = "Vote 2019")
+vote_2015 <- as.vector(unlist(election_results[1, parties_all]))
+vote_2019 <- as.vector(unlist(election_results[2, parties_all]))
+riding_votes <- c("VotePercent_LPC", "VotePercent_CPC",
+                  "VotePercent_NDP", "VotePercent_BQ",
+                  "VotePercent_GPC", "VotePercent_Other")
+national_votes <- c("Vote_LPC", "Vote_CPC", "Vote_NDP",
+                    "Vote_BQ", "Vote_GPC", "Vote_Other")
 
+
+# create file list
+file_list_2015 <- list.files(path = "Vote 2015")
+file_list_2019 <- list.files(path = "Vote 2019")
+
+
+# Load 2019
 results_2019_list <- list()
-for(i in 1:length(file_list)){
-  results_2019_list[[i]] <- read.csv(file = paste0("Vote 2019/", file_list[i]))
+for(i in 1:length(file_list_2019)){
+  results_2019_list[[i]] <- read.csv(file = paste0("Vote 2019/", file_list_2019[i]))
 }
 
 results_2019_full <- rbindlist(results_2019_list)
 rm(results_2019_list)
 
-# Summarize results by riding
-results_2019_full$RidingNumber <- results_2019_full$Electoral.District.Number.Numéro.de.circonscription
-results_2019_full$Elected <- ifelse(results_2019_full$Elected.Candidate.Indicator.Indicateur.du.candidat.élu == "Y",
-                                    1, 0)
-results_2019_full$Party <- results_2019_full$Political.Affiliation.Name_English.Appartenance.politique_Anglais
-results_2019_full$Incumbent <- ifelse(results_2019_full$Incumbent.Indicator.Indicateur_Candidat.sortant == "Y", 1, 0)
-results_2019_full$VoteCount <- results_2019_full$Candidate.Poll.Votes.Count.Votes.du.candidat.pour.le.bureau
-results_2019_full <- results_2019_full[, c("RidingNumber", "Party", "Elected", "Incumbent", "VoteCount")] 
+results_2019 <- clean_previous_years(results_2019_full, 
+                                     vote_2019)
 
-# Rename parties
-results_2019_full$Party[results_2019_full$Party == "Liberal"] <- "LPC"
-results_2019_full$Party[results_2019_full$Party == "Conservative"] <- "CPC"
-results_2019_full$Party[results_2019_full$Party == "NDP-New Democratic Party"] <- "NDP"
-results_2019_full$Party[results_2019_full$Party == "Bloc Québécois"] <- "BQ"
-results_2019_full$Party[results_2019_full$Party == "Green Party"] <- "GPC"
-results_2019_full$Party <- ifelse(results_2019_full$Party %in% parties, results_2019_full$Party, "Other")
-
-#succumb to tidyverse style
-results_2019 <- results_2019_full %>% 
-  group_by(RidingNumber, Party) %>%
-  summarize(Elected = max(Elected),
-            Incumbent = max(Incumbent),
-            VoteCount = sum(VoteCount, na.rm = TRUE))
-results_2019 <- results_2019 %>%
-  group_by(RidingNumber) %>%
-  mutate(VotePercent = VoteCount/sum(VoteCount))
-
-
-results_2019 <- left_join(results_2019, data.frame(Party = c("LPC", "CPC", "NDP", "BQ", "GPC", "Other"),
-                                                   Vote2019 = c(.331, .343, .16, .076, .065, 
-                                                                1 - (.331 + .343 + .16 + .076 + .065))),
-                          by = "Party")
-
-results_2019 <- pivot_wider(results_2019[, c("RidingNumber", "VotePercent", "Vote2019", "Incumbent", "Party")],
-                           names_from = "Party", 
-                           values_from = c("VotePercent", "Vote2019", "Incumbent"))
 results_2019$VotePercent_Other[is.na(results_2019$VotePercent_Other)] <- 0.0
 results_2019$VotePercent_BQ[is.na(results_2019$VotePercent_BQ)] <- 0.0
-results_2019$Vote2019_BQ[is.na(results_2019$Vote2019_BQ)] <- 0.076
-results_2019$Vote2019_Other[is.na(results_2019$Vote2019_Other)] <- 0.025
+results_2019$Vote_BQ[is.na(results_2019$Vote_BQ)] <- 0.076
+results_2019$Vote_Other[is.na(results_2019$Vote_Other)] <- 0.025
+results_2019$Incumbent_Other[is.na(results_2019$Incumbent_Other)] <- 1
+results_2019$Incumbent_BQ[is.na(results_2019$Incumbent_BQ)] <- 0
 
 
-# Load shapefile
-library(sf)
+# Load 2015
+results_2015_list <- list()
+for(i in 1:length(file_list_2015)){
+  results_2015_list[[i]] <- read.csv(file = paste0("Vote 2015/", file_list_2015[i]))
+}
 
-ridings <- st_read("lfed000b16a_e.shp")
+results_2015_full <- rbindlist(results_2015_list)
+rm(results_2015_list)
 
+results_2015 <- clean_previous_years(results_2015_full, 
+                                     vote_2015)
+
+results_2015$VotePercent_Other[is.na(results_2015$VotePercent_Other)] <- 0.0
+results_2015$VotePercent_BQ[is.na(results_2015$VotePercent_BQ)] <- 0.0
+results_2015$Vote_BQ[is.na(results_2015$Vote_BQ)] <- 0.047
+results_2015$Vote_Other[is.na(results_2015$Vote_Other)] <- 0.008
+results_2015$Incumbent_Other[is.na(results_2015$Incumbent_Other)] <- 1
+results_2015$Incumbent_BQ[is.na(results_2015$Incumbent_BQ)] <- 0
+
+
+# create results 2021
+election_date <- ymd("2021-08-17")
+results_2021 <- data.frame(ID = 1:338,
+                           Vote_LPC = all_trend$mu[all_trend$PollDate == election_date &
+                                                     all_trend$party == "LPC"],
+                           Vote_CPC = all_trend$mu[all_trend$PollDate == election_date &
+                                                     all_trend$party == "CPC"],
+                           Vote_NDP = all_trend$mu[all_trend$PollDate == election_date &
+                                                     all_trend$party == "NDP"],
+                           Vote_BQ = all_trend$mu[all_trend$PollDate == election_date &
+                                                    all_trend$party == "BQ"],
+                           Vote_GPC = all_trend$mu[all_trend$PollDate == election_date &
+                                                     all_trend$party == "GPC"],
+                           Vote_Other = all_trend$mu[all_trend$PollDate == election_date &
+                                                      all_trend$party == "Other"])
+
+
+
+results_2015_2019 <- rbind(results_2015, results_2019)
+
+
+# get boundaries
+riding_boundaries <- st_read("Shapefiles/lfed000b16a_e.shp")
+riding_boundaries$ID <- 1:nrow(riding_boundaries)
+riding_boundaries$FEDUID <- as.numeric(riding_boundaries$FEDUID)
+results_2015_2019 <- left_join(results_2015_2019, riding_boundaries[,c("FEDUID", "ID")], 
+                          by = c("RidingNumber" = "FEDUID"))
+results_2015_2019$geometry <- NULL
+
+
+nb <- poly2nb(riding_boundaries, 
+              queen = TRUE,
+              row.names = riding_boundaries$FEDUID)
+save(nb, file = "Shapefiles/nb.rds")
+
+
+# Prep and run Stan model
+nodes <- nb2graph(nb)
+scaling_factor <- get_scaling_factor(nodes)
+#write.csv(nodes, file = "nodes.csv", row.names = FALSE)
+
+
+
+
+
+single_riding <- cmdstan_model("single riding.stan")
+
+fit_ridings <- list()
+riding_draws <- list()
+
+for(i in 1:length(parties)){
+  
+  single_data <- list(
+    
+    N_ridings = 338,
+    
+    riding_id = results_2015_2019$ID,
+    
+    N_edges = nodes$N_edges,
+    node1 = nodes$node1,
+    node2 = nodes$node2,
+    
+    X = as.vector(unlist(results_2015_2019[, paste(national_votes[i])])),
+    
+    Y = as.vector(unlist(results_2015_2019[, paste(riding_votes[i])])),
+    
+    X_obs = all_trend$mu[all_trend$PollDate == ymd("2021-08-13") &
+                                         all_trend$party == paste(parties[i])],
+    sigma_obs = all_trend$sigma_obs[all_trend$PollDate == ymd("2021-08-13") &
+                                         all_trend$party == paste(parties[i])],
+    
+    sf = scaling_factor
+    
+  )
+  
+  fit_ridings[[i]] <- single_riding$sample(
+    data = single_data,
+    seed = 43150228,
+    chains = 4,
+    parallel_chains = 4,
+    iter_warmup = 5000,
+    iter_sampling = 2500,
+    refresh = 500
+    
+  )
+  
+  riding_draws[[i]] <- data.frame(as_draws_df(fit_ridings[[i]]$draws("y_imp")))
+  
+}
+
+
+riding_draws[[6]] <- 1 - riding_draws[[1]] -
+  riding_draws[[2]] -
+  riding_draws[[3]] -
+  riding_draws[[4]] -
+  riding_draws[[5]] 
+
+pred_winner <- matrix(nrow = nrow(riding_draws[[1]]),
+                      ncol = 338)
+for(i in 1:nrow(riding_draws[[1]])){
+  for(j in 1:338){
+    tmp_votes <- data.frame(LPC = riding_draws[[1]][i,j],
+                            CPC = riding_draws[[2]][i,j],
+                            NDP = riding_draws[[3]][i,j],
+                            BQ = riding_draws[[4]][i,j],
+                            GPC = riding_draws[[5]][i,j],
+                            Other = riding_draws[[6]][i,j])
+    pred_winner[i, j] = colnames(tmp_votes)[apply(tmp_votes,1,which.max)]
+
+  }
+  
+}
+
+pred_seats <- matrix(nrow = 10000, ncol = 6)
+for(i in 1:10000){
+  for(j in 1:6){
+    pred_seats[i,j] <- length(pred_winner[i, pred_winner[i,] == parties_all[j]])
+  }
+}
+
+pred_seats <- data.frame(pred_seats)
+colnames(pred_seats) <- parties_all
+
+pred_probs <- matrix(nrow = 338, ncol = 6)
+for(i in 1:338){
+  for(j in 1:6){
+    pred_probs[i,j] <- length(pred_winner[pred_winner[,i] == parties_all[j], i]) / 10000
+  }
+}
+
+pred_probs <- data.frame(pred_probs)
+colnames(pred_probs) <- parties_all
+
+apply(pred_seats, 2, function(x) quantile(x, probs = c(0, 0.02, 0.5, 0.975, 1)))
+
+
+
+sum(pred_seats$CPC > pred_seats$LPC) / nrow(pred_seats)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+mean_votes <- data.frame(LPC = LPC_preds$mean,
+                         CPC = CPC_preds$mean,
+                         NDP = NDP_preds$mean,
+                         BQ = BQ_preds$mean,
+                         GPC = GPC_preds$mean )
+mean_votes$Other <- 1 - apply(mean_votes[,c("LPC", "CPC", "NDP", "BQ", "GPC")], 1, sum)
+
+mean_votes$predwinner <- colnames(mean_votes)[apply(mean_votes,1,which.max)]
+mean_votes$winner <- colnames(results_2019[, riding_votes])[apply(results_2019[, riding_votes],1,which.max)]
+
+
+# For inla
+W <- nb2mat(nb, style = "B")
+nb2INLA("Shapefiles/g.adj", nb)
+
+mod_inla_LPC <- inla(VotePercent_LPC ~ 1 + Vote2019_LPC + Incumbent_LPC +
+                   f(ID, model = "bym2", graph = W),
+                 control.predictor = list(compute = TRUE),
+                 control.compute = list(waic = TRUE),
+                 data = results_2019)
+mod_inla_CPC <- inla(VotePercent_CPC ~ 1 + Vote2019_CPC + Incumbent_CPC +
+                   f(ID, model = "bym2", graph = W),
+                 control.predictor = list(compute = TRUE),
+                 control.compute = list(waic = TRUE),
+                 data = results_2019)
+mod_inla_NDP <- inla(VotePercent_NDP ~ 1 + Vote2019_NDP + Incumbent_NDP +
+                       f(ID, model = "bym2", graph = W),
+                     control.predictor = list(compute = TRUE),
+                     control.compute = list(waic = TRUE),
+                     data = results_2019)
+mod_inla_BQ <- inla(VotePercent_BQ ~ 1 + Vote2019_BQ + Incumbent_BQ +
+                       f(ID, model = "bym2", graph = W),
+                     control.predictor = list(compute = TRUE),
+                     control.compute = list(waic = TRUE),
+                     data = results_2019)
+mod_inla_GPC <- inla(VotePercent_GPC ~ 1 + Vote2019_GPC + Incumbent_GPC +
+                       f(ID, model = "bym2", graph = W),
+                     control.predictor = list(compute = TRUE),
+                     control.compute = list(waic = TRUE),
+                     data = results_2019)
+
+LPC_preds <- mod_inla_LPC$summary.linear.predictor
+CPC_preds <- mod_inla_CPC$summary.linear.predictor
+NDP_preds <- mod_inla_NDP$summary.linear.predictor
+BQ_preds <- mod_inla_BQ$summary.linear.predictor
+GPC_preds <- mod_inla_GPC$summary.linear.predictor
+
+mean_votes <- data.frame(LPC = LPC_preds$mean,
+                         CPC = CPC_preds$mean,
+                         NDP = NDP_preds$mean,
+                         BQ = BQ_preds$mean,
+                         GPC = GPC_preds$mean )
+mean_votes$Other <- 1 - apply(mean_votes[,c("LPC", "CPC", "NDP", "BQ", "GPC")], 1, sum)
+
+mean_votes$predwinner <- colnames(mean_votes)[apply(mean_votes,1,which.max)]
+mean_votes$winner <- colnames(results_2019[, riding_votes])[apply(results_2019[, riding_votes],1,which.max)]
+
+
+
+
+
+
+
+
+
+vars_to_subset <- c(8:33, 107:107, 109, 691, 695:707, 1289:1290, 1617:1618,
+                    1683, 1685, 1693, 1886, 1897)
+demo_data <- read.csv("Riding census data.csv")
+demo_data$RidingNumber <- demo_data$GEO_CODE..POR.
+demo_data$Index <- as.numeric(demo_data$Member.ID..Profile.of.Federal.Electoral.Districts..2013.Representation.Order...2247.)
+demo_data$forcol <- demo_data$DIM..Profile.of.Federal.Electoral.Districts..2013.Representation.Order...2247.
+demo_data$Total <- as.numeric(demo_data$Dim..Sex..3...Member.ID...1...Total...Sex)
+demo_data$Male <- as.numeric(demo_data$Dim..Sex..3...Member.ID...2...Male)
+demo_data$Female <- as.numeric(demo_data$Dim..Sex..3...Member.ID...3...Female)
+
+#demo_data <- demo_data[, c("RidingNumber","forcol",  "Index", "Total", "Male", "Female")]
+demo_data <- demo_data[, c("RidingNumber","forcol", "Index", "Total")]
+demo_data <- subset(demo_data, Index %in% vars_to_subset &
+                      RidingNumber > 10000)
+demo_data$Index <- NULL
+demo_data <- demo_data %>% pivot_wider(names_from = forcol, values_from = Total)
+
+
+
+
+
+
+
+
+nodes <- nb2graph(nb)
+scaling_factor <- get_scaling_factor(nodes)
+
+# To use Stan
+# Taken from https://github.com/stan-dev/example-models/blob/master/knitr/car-iar-poisson/nbdata4stan.R
+nb2graph = function(x) {
+  N = length(x);
+  n_links = 0;
+  for (i in 1:N) {
+    if (x[[i]][1] != 0) {
+      n_links = n_links + length(x[[i]]);
+    }
+  }
+  N_edges = n_links / 2;
+  node1 = vector(mode="numeric", length=N_edges);
+  node2 = vector(mode="numeric", length=N_edges);
+  idx = 0;
+  for (i in 1:N) {
+    if (x[[i]][1] > 0) {
+      for (j in 1:length(x[[i]])) {
+        n2 = unlist(x[[i]][j]);
+        if (i < n2) {
+          idx = idx + 1;
+          node1[idx] = i;
+          node2[idx] = n2;
+        }
+      }
+    }
+  }
+  return (list("N"=N,"N_edges"=N_edges,"node1"=node1,"node2"=node2));
+}
+
+get_scaling_factor = function(nbs) {
+  #Build the adjacency matrix
+  adj.matrix = sparseMatrix(i=nbs$node1,j=nbs$node2,x=1,symmetric=TRUE)
+  #The ICAR precision matrix (note! This is singular)
+  Q=  Diagonal(nbs$N, rowSums(adj.matrix)) - adj.matrix
+  
+  #Add a small jitter to the diagonal for numerical stability (optional but recommended)
+  Q_pert = Q + Diagonal(nbs$N) * max(diag(Q)) * sqrt(.Machine$double.eps)
+  
+  # Compute the diagonal elements of the covariance matrix subject to the
+  # constraint that the entries of the ICAR sum to zero.
+  #See the function help for further details.
+  Q_inv = inla.qinv(Q_pert, constr=list(A = matrix(1,1,nbs$N),e=0))
+  
+  #Compute the geometric mean of the variances, which are on the diagonal of Q.inv
+  return((mean(log(diag(Q_inv)))))
+}
 
