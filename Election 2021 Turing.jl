@@ -13,10 +13,10 @@ using PlotlyBase
 
 
 # Set some global variables for Plots
-updated_date = "Aug. 19, 2021"
-day_title = "August 19, 2021"
-update_date = Date(2021, 08, 18)
-value_date = Date(2021, 08, 19)
+updated_date = "Aug. 23, 2021"
+day_title = "August 23, 2021"
+update_date = Date(2021, 08, 23)
+value_date = Date(2021, 08, 23)
 dateformat = DateFormat("y-m-d")
 
 
@@ -399,8 +399,8 @@ mod_election = state_space_elections(y_mat,
 
 
 # Set iters
-n_adapt = 1250
-n_iter = 750
+n_adapt = 1000
+n_iter = 1000
 n_chains = 4
 
 # Define and run model
@@ -556,9 +556,9 @@ for i in 1:(N_parties)
                         lc = colours[i], lw = 2)
 end
 
-annotate!(plt_dens, .40, -23, StatsPlots.text("Source: Wikipedia. Analysis by sjwild.github.io\nUpdated $updated_date", :lower, :right, 8, :grey))
-xticks!(plt_dens, [0.0, 0.1, 0.2, 0.3, 0.4, 0.5], 
-             ["0", "10", "20", "30", "40", "50"])
+annotate!(plt_dens, .39, -23, StatsPlots.text("Source: Wikipedia. Analysis by sjwild.github.io\nUpdated $updated_date", :lower, :right, 8, :grey))
+xticks!(plt_dens, [0.1, 0.2, 0.3, 0.4, 0.5], 
+             ["10", "20", "30", "40", "50"])
 xlabel!(plt_dens, "Percent")
 
 
