@@ -13,10 +13,10 @@ using PlotlyBase
 
 
 # Set some global variables for Plots
-updated_date = "Aug. 23, 2021"
-day_title = "August 23, 2021"
-update_date = Date(2021, 08, 23)
-value_date = Date(2021, 08, 23)
+updated_date = "Aug. 26, 2021"
+day_title = "August 26, 2021"
+update_date = Date(2021, 08, 26)
+value_date = Date(2021, 08, 26)
 dateformat = DateFormat("y-m-d")
 
 
@@ -324,7 +324,6 @@ mode_id = Vector(can_polls.mode_id)
     
 
     # Omega and Rho for non-centered parameterization
-    #z_ω ~ filldist(Normal(0, 1), N_parties, (N_days - 2))
     ω ~ filldist(truncated(Normal(0, 0.005), 0, Inf), N_parties)
     Ρ ~ LKJ(N_parties, 2.0)
 
@@ -339,10 +338,7 @@ mode_id = Vector(can_polls.mode_id)
 
 
     # Transform parameters
-    #Ω = LinearAlgebra.diagm(ω) * ρ * LinearAlgebra.diagm(ω) * z_ω
-    #ρ ~ MvNormal(zeros(N_parties), ω)
     ρ ~ filldist(MvNormal(zeros(N_parties), Ρ), N_days-2)
-    #Ω = filldist(MvNormal(zeros(6), ω), N_days-2)
 
     Ω = diagm(ω) * ρ
 
@@ -556,7 +552,7 @@ for i in 1:(N_parties)
                         lc = colours[i], lw = 2)
 end
 
-annotate!(plt_dens, .39, -23, StatsPlots.text("Source: Wikipedia. Analysis by sjwild.github.io\nUpdated $updated_date", :lower, :right, 8, :grey))
+annotate!(plt_dens, .37, -23, StatsPlots.text("Source: Wikipedia. Analysis by sjwild.github.io\nUpdated $updated_date", :lower, :right, 8, :grey))
 xticks!(plt_dens, [0.1, 0.2, 0.3, 0.4, 0.5], 
              ["10", "20", "30", "40", "50"])
 xlabel!(plt_dens, "Percent")
