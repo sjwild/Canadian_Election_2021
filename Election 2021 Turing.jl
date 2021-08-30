@@ -13,10 +13,10 @@ using PlotlyBase
 
 
 # Set some global variables for Plots
-updated_date = "Aug. 26, 2021"
-day_title = "August 26, 2021"
-update_date = Date(2021, 08, 26)
-value_date = Date(2021, 08, 26)
+updated_date = "Aug. 29, 2021"
+day_title = "August 29, 2021"
+update_date = Date(2021, 08, 29)
+value_date = Date(2021, 08, 29)
 dateformat = DateFormat("y-m-d")
 
 
@@ -200,10 +200,10 @@ pre_polls.GPC = passmissing(parse).(Float64, pre_polls.GPC)
 dropmissing!(pre_2021_polls, :LPC)
 pre_2021_polls.Polling_firm = pre_2021_polls[:, "Polling firm"]
 pre_2021_polls = pre_2021_polls[in(polling_firms).(pre_2021_polls.Polling_firm), :]
-pre_2021_polls.PollDate = pre_2021_polls[:, "Last dateof polling[1]"]
-pre_2021_polls.SampleSize = pre_2021_polls[:, "Samplesize[4]"]
+pre_2021_polls.PollDate = pre_2021_polls[:, "Last dateof polling[a]"]
+pre_2021_polls.SampleSize = pre_2021_polls[:, "Samplesize[d]"]
 pre_2021_polls.SampleSize = clean_samplesize(pre_2021_polls.SampleSize)
-pre_2021_polls.mode = clean_mode(pre_2021_polls[:, "Polling method[5]"])
+pre_2021_polls.mode = clean_mode(pre_2021_polls[:, "Polling method[e]"])
 pre_2021_polls.LPC = parse.(Float64, pre_2021_polls.LPC)
 pre_2021_polls.CPC = parse.(Float64, pre_2021_polls.CPC)
 pre_2021_polls.NDP = parse.(Float64, pre_2021_polls.NDP)
@@ -218,11 +218,15 @@ pre_2021_polls.GPC = passmissing(parse).(Float64, pre_2021_polls.GPC)
 dropmissing!(campaign_2021_polls, :LPC)
 campaign_2021_polls.Polling_firm = campaign_2021_polls[:, "Polling firm"]
 campaign_2021_polls = campaign_2021_polls[in(polling_firms).(campaign_2021_polls.Polling_firm), :]
-campaign_2021_polls.PollDate = campaign_2021_polls[:, "Last dateof polling[1]"]
-campaign_2021_polls.SampleSize = campaign_2021_polls[:, "Samplesize[4]"]
+campaign_2021_polls.PollDate = campaign_2021_polls[:, "Last dateof polling[a]"]
+campaign_2021_polls.SampleSize = campaign_2021_polls[:, "Samplesize[d]"]
 campaign_2021_polls.SampleSize = clean_samplesize(campaign_2021_polls.SampleSize)
-campaign_2021_polls.mode = clean_mode(campaign_2021_polls[:, "Polling method[5]"])
-
+campaign_2021_polls.mode = clean_mode(campaign_2021_polls[:, "Polling method[e]"])
+campaign_2021_polls.LPC = parse.(Float64, campaign_2021_polls.LPC)
+campaign_2021_polls.CPC = parse.(Float64, campaign_2021_polls.CPC)
+campaign_2021_polls.NDP = parse.(Float64, campaign_2021_polls.NDP)
+campaign_2021_polls.BQ = parse.(Float64, campaign_2021_polls.BQ)
+campaign_2021_polls.GPC = parse.(Float64, campaign_2021_polls.GPC)
 
 
 # Combine polls into one DataFrame
