@@ -13,10 +13,10 @@ using PlotlyBase
 
 
 # Set some global variables for Plots
-updated_date = "Aug. 29, 2021"
-day_title = "August 29, 2021"
-update_date = Date(2021, 08, 29)
-value_date = Date(2021, 08, 29)
+updated_date = "Sept. 2, 2021"
+day_title = "September 2, 2021"
+update_date = Date(2021, 09, 2)
+value_date = Date(2021, 09, 2)
 dateformat = DateFormat("y-m-d")
 
 
@@ -163,7 +163,8 @@ campaign_2021_polls = @rget campaign_2021_polls
 polling_firms =  ["Abacus Data", "Leger", "Mainstreet Research", "Nanos Research",
                   "Campaign Research", "Innovative Research", "EKOS", "Angus Reid",
                   "Ipsos", "DART/Maru", "Forum Research", "Research Co.",
-                  "Pollara", "Insights West", "Stratcom", "Counsel", "Delphi Polling"] 
+                  "Pollara", "Insights West", "Stratcom", "Counsel", "Delphi Polling",
+                  "Earnscliffe/Leger"] 
 parties = [:LPC, :CPC, :NDP, :BQ, :GPC]
 
 
@@ -556,7 +557,7 @@ for i in 1:(N_parties)
                         lc = colours[i], lw = 2)
 end
 
-annotate!(plt_dens, .37, -23, StatsPlots.text("Source: Wikipedia. Analysis by sjwild.github.io\nUpdated $updated_date", :lower, :right, 8, :grey))
+annotate!(plt_dens, .40, -23, StatsPlots.text("Source: Wikipedia. Analysis by sjwild.github.io\nUpdated $updated_date", :lower, :right, 8, :grey))
 xticks!(plt_dens, [0.1, 0.2, 0.3, 0.4, 0.5], 
              ["10", "20", "30", "40", "50"])
 xlabel!(plt_dens, "Percent")
