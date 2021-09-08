@@ -13,10 +13,10 @@ using PlotlyBase
 
 
 # Set some global variables for Plots
-updated_date = "Sept. 2, 2021"
-day_title = "September 2, 2021"
-update_date = Date(2021, 09, 2)
-value_date = Date(2021, 09, 2)
+updated_date = "Sept. 7, 2021"
+day_title = "September 7, 2021"
+update_date = Date(2021, 09, 7)
+value_date = Date(2021, 09, 7)
 dateformat = DateFormat("y-m-d")
 
 
@@ -202,9 +202,9 @@ dropmissing!(pre_2021_polls, :LPC)
 pre_2021_polls.Polling_firm = pre_2021_polls[:, "Polling firm"]
 pre_2021_polls = pre_2021_polls[in(polling_firms).(pre_2021_polls.Polling_firm), :]
 pre_2021_polls.PollDate = pre_2021_polls[:, "Last dateof polling[a]"]
-pre_2021_polls.SampleSize = pre_2021_polls[:, "Samplesize[d]"]
+pre_2021_polls.SampleSize = pre_2021_polls[:, "Samplesize[c]"]
 pre_2021_polls.SampleSize = clean_samplesize(pre_2021_polls.SampleSize)
-pre_2021_polls.mode = clean_mode(pre_2021_polls[:, "Polling method[e]"])
+pre_2021_polls.mode = clean_mode(pre_2021_polls[:, "Polling method[d]"])
 pre_2021_polls.LPC = parse.(Float64, pre_2021_polls.LPC)
 pre_2021_polls.CPC = parse.(Float64, pre_2021_polls.CPC)
 pre_2021_polls.NDP = parse.(Float64, pre_2021_polls.NDP)
@@ -220,9 +220,9 @@ dropmissing!(campaign_2021_polls, :LPC)
 campaign_2021_polls.Polling_firm = campaign_2021_polls[:, "Polling firm"]
 campaign_2021_polls = campaign_2021_polls[in(polling_firms).(campaign_2021_polls.Polling_firm), :]
 campaign_2021_polls.PollDate = campaign_2021_polls[:, "Last dateof polling[a]"]
-campaign_2021_polls.SampleSize = campaign_2021_polls[:, "Samplesize[d]"]
+campaign_2021_polls.SampleSize = campaign_2021_polls[:, "Samplesize[c]"]
 campaign_2021_polls.SampleSize = clean_samplesize(campaign_2021_polls.SampleSize)
-campaign_2021_polls.mode = clean_mode(campaign_2021_polls[:, "Polling method[e]"])
+campaign_2021_polls.mode = clean_mode(campaign_2021_polls[:, "Polling method[d]"])
 campaign_2021_polls.LPC = parse.(Float64, campaign_2021_polls.LPC)
 campaign_2021_polls.CPC = parse.(Float64, campaign_2021_polls.CPC)
 campaign_2021_polls.NDP = parse.(Float64, campaign_2021_polls.NDP)
