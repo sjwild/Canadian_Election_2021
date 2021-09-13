@@ -13,10 +13,10 @@ using PlotlyBase
 
 
 # Set some global variables for Plots
-updated_date = "Sept. 7, 2021"
-day_title = "September 7, 2021"
-update_date = Date(2021, 09, 7)
-value_date = Date(2021, 09, 7)
+updated_date = "Sept. 11, 2021"
+day_title = "September 20, 2021"
+update_date = Date(2021, 09, 20)
+value_date = Date(2021, 09, 20)
 dateformat = DateFormat("y-m-d")
 
 
@@ -111,6 +111,85 @@ function get_value(x)
     return out
  
 end
+
+
+
+function get_seats()
+
+    out = Matrix{Float64}(undef, 6, 3)
+
+    out[:,1] = [quantile(num_seats[:, i], .5) for i in 1:6]
+    out[:,2] = [quantile(num_seats[:, i], 0.025) for i in 1:6]
+    out[:,3] = [quantile(num_seats[:, i], 0.975) for i in 1:6]
+
+    return out
+ 
+end
+
+
+function clean_results(X::Vector, outcome_vars::Vector, p::Vector, election::Vector)
+    outcomes = CSV.read(X[1], DataFrame; normalizenames = true)
+    outcomes.RidingNumber = outcomes.Electoral_District_Number_Numéro_de_circonscription
+    outcomes.Elected = outcomes.Elected_Candidate_Indicator_Indicateur_du_candidat_élu
+    outcomes.Party = outcomes.Political_Affiliation_Name_English_Appartenance_politique_Anglais
+    outcomes.Incumbent = outcomes.Incumbent_Indicator_Indicateur_Candidat_sortant
+    outcomes.VoteCount = outcomes.Candidate_Poll_Votes_Count_Votes_du_candidat_pour_le_bureau
+    outcomes = outcomes[:, outcomes_vars]
+
+    for i ∈ 2:length(X)
+        tmp = CSV.read(X[i], DataFrame; normalizenames = true)
+        tmp.RidingNumber = tmp.Electoral_District_Number_Numéro_de_circonscription
+        tmp.Elected = tmp.Elected_Candidate_Indicator_Indicateur_du_candidat_élu
+        tmp.Party = tmp.Political_Affiliation_Name_English_Appartenance_politique_Anglais
+        tmp.Incumbent = tmp.Incumbent_Indicator_Indicateur_Candidat_sortant
+        tmp.VoteCount = tmp.Candidate_Poll_Votes_Count_Votes_du_candidat_pour_le_bureau
+        tmp = tmp[:, outcomes_vars]
+
+        append!(outcomes, tmp)
+    end
+
+
+    outcomes.Incumbent = ifelse.(outcomes.Incumbent .== "Y", 1, 0)
+    outcomes.Incumbent = ifelse.(outcomes.Elected .== "Y", 1, 0)
+    outcomes.Party[outcomes.Party .== "Liberal"] .= "LPC"
+    outcomes.Party[outcomes.Party .== "Conservative"] .= "CPC"
+    outcomes.Party[outcomes.Party .== "NDP-New Democratic Party"] .= "NDP"
+    outcomes.Party[outcomes.Party .== "Bloc Québécois"] .= "BQ"
+    outcomes.Party[outcomes.Party .== "Green Party"] .= "GPC"
+
+    oth = in(p).(outcomes.Party)
+    outcomes.Party[oth .== 0] .= "Other"
+
+
+    outcomes = groupby(outcomes, [:RidingNumber, :Party])
+    results = combine(outcomes, [:Incumbent => maximum => :Incumbent, 
+                                        :Elected => maximum => :Elected, 
+                                        :VoteCount => sum => :VoteCount])
+    riding = groupby(results, :RidingNumber)
+    riding = combine(riding, :VoteCount => sum => :TotalVotes)
+    results = leftjoin(results, riding, on = :RidingNumber)
+    results.VotePercent = results.VoteCount ./ results.TotalVotes
+
+    # unstack
+    results = unstack(results[:, [:RidingNumber, :Party, :VotePercent]], :Party, :VotePercent)
+
+
+    results.Other = coalesce.(results.Other, 0.0)
+    results.BQ = coalesce.(results.BQ, 0.0)
+    results.Election_LPC = [election[1] for i in 1:size(results, 1)]
+    results.Election_CPC = [election[2] for i in 1:size(results, 1)]
+    results.Election_NDP = [election[3] for i in 1:size(results, 1)]
+    results.Election_BQ = [election[4] for i in 1:size(results, 1)]
+    results.Election_GPC = [election[5] for i in 1:size(results, 1)]
+    results.Election_Other = [election[6] for i in 1:size(results, 1)]
+
+    return results
+
+end
+
+
+
+
 
 
 
@@ -557,7 +636,7 @@ for i in 1:(N_parties)
                         lc = colours[i], lw = 2)
 end
 
-annotate!(plt_dens, .40, -23, StatsPlots.text("Source: Wikipedia. Analysis by sjwild.github.io\nUpdated $updated_date", :lower, :right, 8, :grey))
+annotate!(plt_dens, .40, -18, StatsPlots.text("Source: Wikipedia. Analysis by sjwild.github.io\nUpdated $updated_date", :lower, :right, 8, :grey))
 xticks!(plt_dens, [0.1, 0.2, 0.3, 0.4, 0.5], 
              ["10", "20", "30", "40", "50"])
 xlabel!(plt_dens, "Percent")
@@ -592,8 +671,10 @@ savefig(plt_campaign, "can_vote_intention_campaign_period.png")
 
 
 
-# Get values
-get_value(value_date)
+
+
+
+
 
 
 
@@ -619,45 +700,173 @@ end
 
 
 # Load data
-nodes = CSV.read("Shapefiles/nodes.csv", DataFrame)
+nodes = CSV.read("nodes.csv", DataFrame)
+n_edges = 806
+n_nodes = 338
+scaling_factor = 6.967394
 
-files_2015 = readdir("Votes 2015", join = true)
-files_2019 = readdir("Votes 2019", join = true)
-
-
-
-
-
-
+# Load outcomes 2015 and 2019
+files_2015 = readdir("Vote 2015", join = true)
+files_2019 = readdir("Vote 2019", join = true)
 
 
 
+# 2015 results
+outcomes_vars = ["RidingNumber", "Elected", "Party", "Incumbent", "VoteCount"]
+results_2015 = clean_results(files_2015, outcomes_vars, parties[1:5], start_election)
 
-@model function bym2(N, N_edges, node1, node2, y, x, scaling_factor, id_num)
+# 2019 results
+results_2019 = clean_results(files_2019, outcomes_vars, parties[1:5], end_election)
+
+# combine
+results = [results_2015; results_2019]
+
+riding_dict = Dict(key => idx for (idx, key) in enumerate(unique(results.RidingNumber)))
+results.RidingNumber_id = [riding_dict[i] for i in results.RidingNumber]
+reverse_riding = Dict(value => key for (key, value) in riding_dict)
+
+
+results_2021 = DataFrame(:Election_LPC => ξ_m[xi_days .== update_date, 1],
+                         :Election_CPC => ξ_m[xi_days .== update_date, 2],
+                         :Election_NDP => ξ_m[xi_days .== update_date, 3],
+                         :Election_BQ => ξ_m[xi_days .== update_date, 4],
+                         :Election_GPC => ξ_m[xi_days .== update_date, 5],
+                         :Election_Other => ξ_m[xi_days .== update_date, 6])
+std_2021 = DataFrame(:std_LPC => std(ξ[:, xi_days .== update_date, 1]),
+                     :std_CPC => std(ξ[:, xi_days .== update_date, 2]),
+                     :std_NDP => std(ξ[:, xi_days .== update_date, 3]),
+                     :std_BQ => std(ξ[:, xi_days .== update_date, 4]),
+                     :std_GPC => std(ξ[:, xi_days .== update_date, 5]),
+                     :std_Other => std(ξ[:, xi_days .== update_date, 6]))
+
+
+@model function bym2(N, N_edges, node1, node2, y, x, x_obs, x_std, scaling_factor, id_num, id_num_new)
 
     # priors
-    α ~ Normal(0, 1)
-    β ~ Normal(0, 1)
+    #α ~ Normal(0, 1)
+    #β ~ Normal(0, 1)
 
     σ ~ truncated(Normal(0, 1), 0, Inf)
     τ ~ truncated(Normal(0, 1), 0, Inf)
     ϕ ~ filldist(Uniform(-1, 1), N)
+    z_σ ~ Normal(0, 1)
     sum_ϕ ~ Normal(0, 0.0001 * N)
   
     θ ~ filldist(Normal(0, 1), N)
 
     ρ ~ Beta(0.5, 0.5)
+
+    x_est ~ Normal(0, 1)
     
     # model
     sum_ϕ = sum(ϕ)
-    convolved_re = convolve_re(ϕ, θ, id_num, ρ, scaling_factor)
+    convolved_re = sqrt(1 - ρ) .* θ[id_num] .+ sqrt(ρ / scaling_factor) .* ϕ[id_num]
 
 
-    Turing.@addlogprob! icar_adjustment(ϕ, node1, node2)
-    μ =  x .+ convolved_re .* τ
+    Turing.@addlogprob! -0.5 * dot(ϕ[node1] - ϕ[node2], ϕ[node1] - ϕ[node2])
+    μ =  x .+ convolved_re[id_num] .* τ
     y ~ MvNormal(μ, σ)
+    x_obs ~ Normal(x_est, x_std)
 
-    return λ
+    # gq 
+    y_new = x_est .+ convolved_re[id_num_new] .* τ .+ σ .* z_σ 
+ 
+    return y_new
 
 end
 
+
+n_iter_bym = 2500
+n_adapt_bym = 5000
+
+model_bym2 = []
+chns_bym2 = []
+for i in 1:length(parties)
+    party = parties[i]
+    x_obs = results_2021[1, "Election_$party"]
+    x_std = std_2021[1, "std_$party"]
+    push!(model_bym2, bym2(n_nodes,
+                           n_edges,
+                           nodes.node1,
+                           nodes.node2,
+                           Float64.(results[:, party]),
+                           results[:, "Election_$party"],
+                           x_obs,
+                           x_std,
+                           scaling_factor,
+                           results.RidingNumber_id,
+                           [1:338;])) 
+    push!(chns_bym2, sample(model_bym2[i], NUTS(n_adapt_bym, 0.95), 
+                            MCMCThreads(), n_iter_bym, 4))
+
+    Turing.emptyrdcache()
+end
+
+
+seats_2021_gq = []
+for i in 1:6
+    push!(seats_2021_gq, generated_quantities(model_bym2[i], chns_bym2[i]))
+end
+
+
+rs_bym2 = n_iter_bym * 4
+votes_2021 = Array{Float64}(undef, (rs_bym2, 338, N_parties))
+
+for p in 1:N_parties
+    for i in 1:rs_bym2
+        tmp = collect(seats_2021_gq[p][i])
+        for j in 1:338
+            votes_2021[i, j, p] = tmp[j]
+        end
+    end
+end
+
+
+pred_winner = Matrix{String}(undef, (rs_bym2, 338))
+for i in 1:rs_bym2
+    for j in 1:338
+    winner = parties[argmax([votes_2021[i, j, 1],
+                             votes_2021[i, j, 2],
+                             votes_2021[i, j, 3],
+                             votes_2021[i, j, 4],
+                             votes_2021[i, j, 5],
+                             votes_2021[i, j, 6]])]
+    pred_winner[i, j] = winner
+    end
+end
+
+num_seats = Matrix{Int64}(undef, (rs_bym2, 6))
+for i in 1:rs_bym2
+    for j in 1:length(parties)
+        num_seats[i, j] = sum(pred_winner[i, :] .== parties[j])
+    end
+end
+
+
+
+
+# Plot densities for vote share
+plt_seats = plot(size = (750, 500), 
+                 title = "Estimated seat count: $day_title",
+                 title_align= :left, bottom_margin = 12mm, showaxis = :x,
+                 y_ticks = nothing, fontfamily = :Verdana)
+for i in 1:(N_parties)
+    StatsPlots.histogram!(plt_seats, num_seats[:, i], 
+                          label = parties_other[i], fill = (0, .2, colours[i]),
+                          lc = colours[i], lw = 2)
+end
+
+annotate!(plt_seats, 150, -1750, StatsPlots.text("Source: Wikipedia. Analysis by sjwild.github.io\nUpdated $updated_date", :lower, :right, 8, :grey))
+xlabel!(plt_seats, "Seats")
+
+
+plt_seats
+
+savefig(plt_seats, "can_seat_count_on_election_date.png")
+
+
+
+# Get values
+get_value(value_date)
+get_seats()
+sum(num_seats[:,2] .> num_seats[:,1]) / 10000
