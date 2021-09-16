@@ -13,7 +13,7 @@ using PlotlyBase
 
 
 # Set some global variables for Plots
-updated_date = "Sept. 11, 2021"
+updated_date = "Sept. 15, 2021"
 day_title = "September 20, 2021"
 update_date = Date(2021, 09, 20)
 value_date = Date(2021, 09, 20)
@@ -740,7 +740,8 @@ std_2021 = DataFrame(:std_LPC => std(ξ[:, xi_days .== update_date, 1]),
                      :std_Other => std(ξ[:, xi_days .== update_date, 6]))
 
 
-@model function bym2(N, N_edges, node1, node2, y, x, x_obs, x_std, scaling_factor, id_num, id_num_new)
+@model function bym2(N, N_edges, node1, node2, y, x, x_obs, x_std, 
+                     scaling_factor, id_num, id_num_new)
 
     # priors
     #α ~ Normal(0, 1)
@@ -756,7 +757,7 @@ std_2021 = DataFrame(:std_LPC => std(ξ[:, xi_days .== update_date, 1]),
 
     ρ ~ Beta(0.5, 0.5)
 
-    x_est ~ Normal(0, 1)
+    x_est ~ Uniform(0, 1)
     
     # model
     sum_ϕ = sum(ϕ)
@@ -776,8 +777,8 @@ std_2021 = DataFrame(:std_LPC => std(ξ[:, xi_days .== update_date, 1]),
 end
 
 
-n_iter_bym = 2500
-n_adapt_bym = 5000
+n_iter_bym = 2000
+n_adapt_bym = 1000
 
 model_bym2 = []
 chns_bym2 = []
@@ -796,8 +797,10 @@ for i in 1:length(parties)
                            scaling_factor,
                            results.RidingNumber_id,
                            [1:338;])) 
-    push!(chns_bym2, sample(model_bym2[i], NUTS(n_adapt_bym, 0.95), 
-                            MCMCThreads(), n_iter_bym, 4))
+    push!(chns_bym2, sample(model_bym2[i], NUTS(n_adapt_bym, 0.99), 
+                            MCMCThreads(), n_iter_bym, 5))
+    #push!(chns_bym2, sample(model_bym2[i], NUTS(n_adapt_bym, 0.8), 
+    #                        n_iter_bym))
 
     Turing.emptyrdcache()
 end
@@ -856,7 +859,7 @@ for i in 1:(N_parties)
                           lc = colours[i], lw = 2)
 end
 
-annotate!(plt_seats, 150, -1750, StatsPlots.text("Source: Wikipedia. Analysis by sjwild.github.io\nUpdated $updated_date", :lower, :right, 8, :grey))
+annotate!(plt_seats, maximum(num_seats) + 10, -1750, StatsPlots.text("Source: Wikipedia. Analysis by sjwild.github.io\nUpdated $updated_date", :lower, :right, 8, :grey))
 xlabel!(plt_seats, "Seats")
 
 
