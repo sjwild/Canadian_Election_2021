@@ -13,7 +13,7 @@ using PlotlyBase
 
 
 # Set some global variables for Plots
-updated_date = "Sept. 15, 2021"
+updated_date = "Sept. 19, 2021"
 day_title = "September 20, 2021"
 update_date = Date(2021, 09, 20)
 value_date = Date(2021, 09, 20)
@@ -812,7 +812,7 @@ for i in 1:6
 end
 
 
-rs_bym2 = n_iter_bym * 4
+rs_bym2 = n_iter_bym * 5
 votes_2021 = Array{Float64}(undef, (rs_bym2, 338, N_parties))
 
 for p in 1:N_parties
@@ -872,4 +872,33 @@ savefig(plt_seats, "can_seat_count_on_election_date.png")
 # Get values
 get_value(value_date)
 get_seats()
-sum(num_seats[:,2] .> num_seats[:,1]) / 10000
+sum(num_seats[:,1] .> num_seats[:,2]) / 10000
+
+seat_colours = Vector{String}(undef, size(num_seats, 1))
+for i in 1:size(num_seats, 1)
+    if num_seats[i, 1] > 170
+        seat_colours[i] = "red"
+    elseif num_seats[i, 2] > 170
+        seat_colours[i] = "blue"
+    else 
+        seat_colours[i] = "grey"
+    end
+end
+
+plt_majority = StatsPlots.scatter(num_seats[:,1], num_seats[:,2], alpha = 0.3, 
+                                  legend = nothing, msc = seat_colours, 
+                                  mc = seat_colours, size = (750, 500), left_margin = 10mm,
+                                  bottom_margin = 12mm)
+hline!(plt_majority, [170], ls = :dash, lc = :blue, legend = nothing)
+vline!(plt_majority, [170], ls = :dash, lc = :red, legend = nothing)
+title!(plt_majority, "Estimated seat counts and chance of majority", title_align= :left, titlefontsize = 12)
+ylabel!(plt_majority, "Seats CPC")
+xlabel!(plt_majority, "Seats LPC")
+annotate!(plt_majority, maximum(num_seats[:,1]), minimum(num_seats[:, 2]) - 27, StatsPlots.text("Source: Wikipedia. Analysis by sjwild.github.io\nUpdated $updated_date", :lower, :right, 8, :grey))
+
+
+savefig(plt_majority, "can_seat_count_LPC_CPC_majority.png")
+
+get_seats()
+get_value(update_date)
+sum(num_seats[:, 1] .> num_seats[:, 2]) / size(num_seats, 1)
