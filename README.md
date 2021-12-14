@@ -16,7 +16,7 @@ The model is based on the model suggested by Simon Jackman in his book, _Bayesia
 
 The Julia model is run using Turing.jl. The Turing model is coded using a different way of creating a covariance matrix, so that I am able to use Distributions.jl and Turing.jl. I will (hopefully) recode the model when (if?) Distributions.jl gets a native cholesky decomposition of the LKJ distribution.
 
-The predictions for voting intention (that is, for the period after 2019-10-21, the date of 2019 Canadian election) assume that the polling errors are the same after the election as before it. That may or may not be true. I suspect that polling errors are correlated between periods.
+The predictions for voting intention (that is, for the period after the 2021 federal election assume that the polling errors are the same after the election as before it. That may or may not be true. I suspect that polling errors are correlated between periods.
 
 ## Vote intention
 
@@ -27,12 +27,12 @@ The predictions for voting intention (that is, for the period after 2019-10-21, 
 
 
 ## House effects
-House effects vary, but in general firms tended to overestimate NDP and Green Party vote share while underestimating LPC, CPC, and BQ vote share. 
+House effects vary, but in general firms tended to overestimate PPC, NDP and Green Party vote share while underestimating LPC, CPC, and BQ vote share. 
 
 ![alt text](https://github.com/sjwild/Canandian_Election_2021/raw/main/house_effects_pollsters_2019_2021.png "House effects of Canadian polling firms from 2019 to 2021.")
 
 # Future plans
-I plan to eventually produce a second stage of the model to estimate seat distributions. If time permits, I also plan to try produce a third model to estimate riding-by-riding outcomes.
+I intend to update this model and estimate of latent voting intentions approximately "whenever I feel like it", or probably once every few weeks. If and when I get energetic I may try recode the model to run faster.
 
 
 
