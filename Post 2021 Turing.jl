@@ -515,8 +515,8 @@ end
 
 # Plot ξ and polls over time
 xi_days = election_day_2019 .+ Dates.Day.(1:N_days) .- Dates.Day(1)
-colours = [:red, :blue, :orange, :cyan, :green, :yellow, :purple]
-parties_other = ["LPC", "CPC", "NDP", "BQ", "GPC", "Other", "PPC"]
+colours = [:red, :blue, :orange, :cyan, :green, :purple, :yellow]
+parties_other = ["LPC", "CPC", "NDP", "BQ", "GPC", "PPC", "Other"]
 
 
 # should probably build a function to do this
@@ -529,7 +529,7 @@ for i in 1:length(colours)
           label = nothing, fc = colours[i], lc = colours[i], lw = 2)
 end
 
-title!(plt, "Estimated vote intention of Canadian voters:\n2019 to 2021", 
+title!(plt, "Estimated vote intention of Canadian voters:\n2019 to 2022", 
        title_align= :left, titlefontsize = 12)
 annotate!(plt, xi_days[end], -0.08, 
           StatsPlots.text("Source: Wikipedia. Analysis by sjwild.github.io\nUpdated $updated_date", 
@@ -537,7 +537,7 @@ annotate!(plt, xi_days[end], -0.08,
 yticks!(plt, [0.0, 0.1, 0.2, 0.3, 0.4, 0.5], 
              ["0", "10", "20", "30", "40", "50"])
 
-savefig(plt, "can_vote_intention_2019_2021_post_election.png")
+savefig(plt, "can_vote_intention_2019_2022_post_election.png")
 
 
 
@@ -577,7 +577,7 @@ annotate!(plt_house[7], .1, -2.0,
           StatsPlots.text("Source: Wikipedia. Analysis by sjwild.github.io\nUpdated $updated_date", 
           :lower, :right, 8, :grey))
 
-title = plot(title = "House effects: 2019 to 2021", titlefontsize = 16,
+title = plot(title = "House effects: 2019 to 2022", titlefontsize = 16,
              titlefontfamily = :Verdana,
              grid = false, xaxis = nothing, yaxis = nothing, 
              showaxis = false, bottom_margin = 1mm)
@@ -594,7 +594,7 @@ plt_house_effects = plot(title,
                          size = (1100, 750))
 
 
-savefig(plt_house_effects, "house_effects_pollsters_2019_2021.png")
+savefig(plt_house_effects, "house_effects_pollsters_2019_2022.png")
 
 
 
@@ -617,7 +617,7 @@ annotate!(plt_2019, xi_days[end], -0.08, StatsPlots.text("Source: Wikipedia. Ana
 yticks!(plt_2019, [0.0, 0.1, 0.2, 0.3, 0.4, 0.5], 
              ["0", "10", "20", "30", "40", "50"])
 
-savefig(plt_2019, "can_vote_intention_2019_post_2021.png")
+savefig(plt_2019, "can_vote_intention_2019_post_2022.png")
 
 
 
@@ -643,7 +643,7 @@ xlabel!(plt_dens, "Percent")
 
 plt_dens
 
-savefig(plt_dens, "can_vote_intention_post_2021.png")
+savefig(plt_dens, "can_vote_intention_post_2022.png")
 
 [quantile(vec(ξ[:, xi_days .== update_date, i]), [0.5, 0.025, 0.975]) for i in 1:size(ξ, 3)]
 
