@@ -13,10 +13,10 @@ using PlotlyBase
 
 
 # Set some global variables for Plots
-updated_date = "December 12, 2021"
-day_title = "December 12, 2021"
-update_date = Date(2021, 12, 10)
-value_date = Date(2021, 12, 10)
+updated_date = "January 27, 2022"
+day_title = "January 27, 2022"
+update_date = Date(2022, 01, 27)
+value_date = Date(2022, 01, 27)
 dateformat = DateFormat("y-m-d")
 
 
@@ -351,7 +351,7 @@ CSV.write("can_polls_after_2021.csv", can_polls)
 
 # Prep data for model
 #parties = ["LPC", "CPC", "NDP", "BQ", "GPC"]
-parties = ["LPC", "CPC", "NDP", "BQ", "GPC", "Other", "PPC"]
+parties = ["LPC", "CPC", "NDP", "BQ", "GPC", "PPC", "Other"]
 election_2021 = Dates.value(election_day_2021 - election_day_2019) + 1
 N_days = Dates.value(update_date - election_day_2019) + 1
 N_polls = size(can_polls, 1)
@@ -573,7 +573,7 @@ for i in 1:length(parties)
     push!(plt_house, plt_tmp)
 end
 
-annotate!(plt_house[5], .1, -2.0, 
+annotate!(plt_house[7], .1, -2.0, 
           StatsPlots.text("Source: Wikipedia. Analysis by sjwild.github.io\nUpdated $updated_date", 
           :lower, :right, 8, :grey))
 
@@ -632,7 +632,8 @@ for i in 1:(N_parties)
                         lc = colours[i], lw = 2)
 end
 
-annotate!(plt_dens, .37, -18, 
+ann_loc = maximum(ξ) - 0.05
+annotate!(plt_dens, ann_loc, -30, 
           StatsPlots.text("Source: Wikipedia. Analysis by sjwild.github.io\nUpdated $updated_date", 
                           :lower, :right, 8, :grey))
 xticks!(plt_dens, [0.1, 0.2, 0.3, 0.4, 0.5], 
@@ -643,6 +644,8 @@ xlabel!(plt_dens, "Percent")
 plt_dens
 
 savefig(plt_dens, "can_vote_intention_post_2021.png")
+
+[quantile(vec(ξ[:, xi_days .== update_date, i]), [0.5, 0.025, 0.975]) for i in 1:size(ξ, 3)]
 
 
 
