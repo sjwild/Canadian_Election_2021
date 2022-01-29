@@ -537,7 +537,7 @@ annotate!(plt, xi_days[end], -0.08,
 yticks!(plt, [0.0, 0.1, 0.2, 0.3, 0.4, 0.5], 
              ["0", "10", "20", "30", "40", "50"])
 
-savefig(plt, "can_vote_intention_2019_2022_post_election.png")
+savefig(plt, "can_vote_intention_2019_2021_post_election.png")
 
 
 
@@ -594,7 +594,7 @@ plt_house_effects = plot(title,
                          size = (1100, 750))
 
 
-savefig(plt_house_effects, "house_effects_pollsters_2019_2022.png")
+savefig(plt_house_effects, "house_effects_pollsters_2019_2021.png")
 
 
 
@@ -617,7 +617,7 @@ annotate!(plt_2019, xi_days[end], -0.08, StatsPlots.text("Source: Wikipedia. Ana
 yticks!(plt_2019, [0.0, 0.1, 0.2, 0.3, 0.4, 0.5], 
              ["0", "10", "20", "30", "40", "50"])
 
-savefig(plt_2019, "can_vote_intention_2019_post_2022.png")
+savefig(plt_2019, "can_vote_intention_2019_post_2021.png")
 
 
 
@@ -643,7 +643,7 @@ xlabel!(plt_dens, "Percent")
 
 plt_dens
 
-savefig(plt_dens, "can_vote_intention_post_2022.png")
+savefig(plt_dens, "can_vote_intention_post_2021.png")
 
 [quantile(vec(ξ[:, xi_days .== update_date, i]), [0.5, 0.025, 0.975]) for i in 1:size(ξ, 3)]
 
