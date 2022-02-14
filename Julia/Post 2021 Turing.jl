@@ -484,7 +484,6 @@ chns_election = sample(mod_election, NUTS(n_adapt, 0.8; max_depth = 12), MCMCThr
 # Save chains
 save("Data/turing_model_post_election.jld", "chns_election", chns_election)
 
-
 # Generate ξ
 ξ_gq = generated_quantities(mod_election, chns_election)
 
