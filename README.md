@@ -1,4 +1,4 @@
-# Canandian_Election_2021
+# Canadian_Election_2021
 
 This state space model is used to estimate the vote intention of Canadian voters.  The first model is produced using R and Stan, while the second is a similar version produced using Julia and Turing.jl. Both models deliver similar results.
 
@@ -20,16 +20,16 @@ The predictions for voting intention (that is, for the period after the 2021 fed
 
 ## Vote intention
 
-![alt text](https://github.com/sjwild/Canandian_Election_2021/raw/main/can_vote_intention_post_2021.png "Density plot of estimated vote share per party.")
+![alt text](https://github.com/sjwild/Canadian_Election_2021/raw/main/Images/can_vote_intention_post_2021.png "Density plot of estimated vote share per party.")
 
 
-![alt text](https://github.com/sjwild/Canandian_Election_2021/raw/main/can_vote_intention_2019_post_2021.png "Vote share of Canadian parties from 2019 to 2021.")
+![alt text](https://github.com/sjwild/Canadian_Election_2021/raw/main/Images/can_vote_intention_2019_post_2021.png "Vote share of Canadian parties from 2019 to 2021.")
 
 
 ## House effects
 House effects vary, but in general firms tended to overestimate PPC, NDP and Green Party vote share while underestimating LPC, CPC, and BQ vote share. 
 
-![alt text](https://github.com/sjwild/Canandian_Election_2021/raw/main/house_effects_pollsters_2019_2021.png "House effects of Canadian polling firms from 2019 to 2021.")
+![alt text](https://github.com/sjwild/Canadian_Election_2021/raw/main/Images/house_effects_pollsters_2019_2021.png "House effects of Canadian polling firms from 2019 to 2021.")
 
 # Future plans
 I intend to update this model and estimate of latent voting intentions approximately "whenever I feel like it", or probably once every few weeks. If and when I get energetic I may try recode the model to run faster.
