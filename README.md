@@ -36,7 +36,7 @@ There will be an Ontario sometime around the beginning of June, 2022. I estimate
 
 ## Ontario vote intention
 
-![alt text](https://github.com/sjwild/Canadian_Election_2021/raw/main/Images/Ontario/ON_vote_intention_2014_2022.png "Density plot of estimated vote share per party in Ontario, 2022.")
+![alt text](https://github.com/sjwild/Canadian_Election_2021/raw/main/Images/Ontario/ON_vote_intention_2022.png "Density plot of estimated vote share per party in Ontario, 2022.")
 
 
 ![alt text](https://github.com/sjwild/Canadian_Election_2021/raw/main/Images/Ontario/ON_vote_intention_2014_2022.png "Vote share of Ontario parties from 2014 to 2022.")
