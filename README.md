@@ -31,6 +31,21 @@ House effects vary, but in general firms tended to overestimate PPC, NDP and Gre
 
 ![alt text](https://github.com/sjwild/Canadian_Election_2021/raw/main/Images/house_effects_pollsters_2019_2021.png "House effects of Canadian polling firms from 2019 to 2021.")
 
+# Ontario
+There will be an Ontario sometime around the beginning of June, 2022. I estimate the vote intention of Ontario voters using the models above.
+
+## Ontario vote intention
+
+![alt text](https://github.com/sjwild/Canadian_Election_2021/raw/main/Images/Ontario/ON_vote_intention_2014_2022.png "Density plot of estimated vote share per party in Ontario, 2022.")
+
+
+![alt text](https://github.com/sjwild/Canadian_Election_2021/raw/main/Images/Ontario/ON_vote_intention_2014_2022.png "Vote share of Ontario parties from 2014 to 2022.")
+
+
+## Ontario house effects
+
+![alt text](https://github.com/sjwild/Canadian_Election_2021/raw/main/Images/Ontario/ON_house_effects_pollsters_2014_2022.png "House effects of polling firms surveying residents of Ontario, 2014 to 2022.")
+
 # Future plans
 I intend to update this model and estimate of latent voting intentions approximately "whenever I feel like it", or probably once every few weeks. If and when I get energetic I may try recode the model to run faster.
 
