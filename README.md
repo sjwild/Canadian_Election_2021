@@ -36,7 +36,7 @@ The intent of the custom functions is to try standardize the steps so that plots
 ## House effects
 House effects vary, but in general firms tended to overestimate PPC, NDP and Green Party vote share while underestimating LPC, CPC, and BQ vote share. 
 
-![alt text](https://github.com/sjwild/Canadian_Election_2021/raw/main/Images/Federal/house_effects_pollsters_2019_2021.png "House effects of Canadian polling firms from 2019 to 2021.")
+![alt text](https://github.com/sjwild/Canadian_Election_2021/blob/main/Images/Federal/can_house_effects_pollsters_2019_2022.png "House effects of Canadian polling firms from 2019 to 2021.")
 
 # Ontario
 There will be an Ontario sometime around the beginning of June, 2022. I estimate the vote intention of Ontario voters using the models above.
