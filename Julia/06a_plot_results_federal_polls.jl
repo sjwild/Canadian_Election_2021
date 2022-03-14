@@ -64,7 +64,7 @@ density_fed = plot_density(fed_results,
 # Save images
 savefig(trend_fed, "Images/Federal/can_vote_intention_2019_post_2021.png")
 savefig(house_effects_fed, "Images/Federal/can_house_effects_pollsters_2019_2022.png")
-savefig(density_fed, "Images/Federal/can_vote_intention_2022.png")
+savefig(density_fed, "Images/Federal/can_vote_intention_post_2021.png")
 savefig(trend_180_fed, "Images/Federal/can_vote_intention_last_180_days.png")
 
 
