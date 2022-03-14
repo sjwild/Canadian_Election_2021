@@ -1,4 +1,5 @@
 
+
 # activate OntarioElection
 ENV["CMDSTAN"] = expanduser("~/cmdstan/")
 
@@ -24,103 +25,7 @@ value_date = Date(2022, 02, 19)
 dateformat = DateFormat("y-m-d")
 
 
-
-# custom functions
-function clean_mode(x::Vector)
-
-    xmode = Vector{Union{Missing, String}}(undef, length(x))
-
-    for i in 1:length(x)
-  
-        if contains(x[i], "online/telephone")
-            xmode[i] = "Online - telephone"
-        elseif contains(x[i], "telephone/IVR")
-            xmode[i] = "telephone - IVR"
-        elseif contains(x[i], "IVR") == true  & 
-            contains(x[i], "telephone - IVR") == false
-            xmode[i] = "IVR"
-        elseif contains(x[i], "online") == true &
-            contains(x[i], "Online - telephone") == false
-            xmode[i] = "online"
-        elseif contains(x[i], "telephone") == true &
-            contains(x[i], "telephone - IVR") == false &
-            contains(x[i], "Online - telephone") == false
-            xmode[i] = "telephone"
-            
-        end
-
-    end
-    
-  return xmode
-  
-end
-
-
-function clean_samplesize(x::Vector)
-
-    x = replace.(x, " (1/3)" => "")
-    x = replace.(x, " (2/3)" => "")
-    x = replace.(x, " (3/3)" => "")
-    x = replace.(x, " (1/2)" => "")
-    x = replace.(x, " (2/2)" => "")
-    x = replace.(x, " (1/4)" => "")
-    x = replace.(x, "," => "")
-    x = replace.(x, "+" => "")
-    x = parse.(Int, x)
-
-    return x
-
-end
-
-
-
-
-function convert_numeric(x::DataFrame, var::Vector)
-
-    for i in 1:length(var)
-        x[:, var[i]] = parse.(Float64, x[:, var[i]])
-    end
-
-end
-
-
-
-function calc_moe(x, ss)
-    return  sqrt(x * (1-x) / ss)
-
-end
-
-
-function extract_params(chn::Chains, param::String)
-
-    tmp = chn |> DataFrame
-    tmp = tmp[:, startswith.(names(tmp), param)]
-    ll = [quantile(tmp[:,i], 0.025) for i in 1:size(tmp, 2)]
-    m = [quantile(tmp[:,i], 0.5) for i in 1:size(tmp, 2)]
-    uu = [quantile(tmp[:,i], 0.975) for i in 1:size(tmp, 2)]
-
-    return ll, m, uu
-    
-end
-
-
-
-function get_value(x)
-
-    out = Matrix{Float64}(undef, 6, 3)
-
-    out[:,1] = ξ_m[xi_days .== x,:]
-    out[:,2] = ξ_ll[xi_days .== x,:]
-    out[:,3] = ξ_uu[xi_days .== x,:]
-
-    return out
- 
-end
-
-
-
-
-
+include("01_custom_functions.jl")
 
 
 # scrape data from web. Use R, as rvest makes it easy
@@ -163,7 +68,7 @@ polling_firms =  ["Abacus Data", "Leger", "Mainstreet Research", "Nanos Research
                   "Earnscliffe/Leger"] 
 parties = [:PC, :NDP, :Liberal, :Green, :Other]
 colours = [:blue, :orange, :red, :green, :yellow]
-parties_names = ["CPC", "NDP", "Liberal", "Green", "Others"]
+parties_names = ["PC", "NDP", "Liberal", "Green", "Others"]
 
 # clean pre 2022 election polls
 pre_polls.Green = allowmissing(pre_polls.Green)
@@ -446,7 +351,7 @@ p_end = N_days
 pollster_start = 1
 pollster_end = N_pollsters
 xi_days = election_day_2014 .+ Dates.Day.(1:N_days) .- Dates.Day(1)
-
+day_180_before = update_date - Dates.Day(180)
 
 for p in 1:N_parties
     ξ[:, :, p] .= ξ_raw[:, p_start:p_end]
@@ -507,8 +412,6 @@ yticks!(plt_trend, [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6],
 
 savefig(plt_trend, "Images/Ontario/ON_vote_intention_2014_2022.png")
 
-plt_trend
-
 
 # Plot house effects
 pollster_list = [reverse_pollster[i] for i in 1:N_pollsters]
@@ -529,7 +432,7 @@ for i in 1:length(parties)
     vline!(plt_tmp, [0.0], linestyle = :dot, lc = :orange)
     xticks!(plt_tmp, ([-.1, -0.05, 0, 0.05, .1], ["-10", "-5", "0", "5", "10"]))
     if i == 1
-        yticks!(plt_tmp, 0.5:1:(N_pollsters + 0.5), pollster_list)
+        yticks!(plt_tmp, 0.5:1:(N_pollsters - 0.5), pollster_list)
     else
         yaxis!(plt_tmp, y_ticks = nothing)
     end
@@ -546,12 +449,11 @@ annotate!(plt_house[5], .1, -1.25,
           :lower, :right, 8, :grey))
 
 title = plot(title = "House effects in Ontario: 2014 to 2022", 
-             titlefontsize = 16,
+             titlefontsize = 20,
              titlefontfamily = :Verdana,
              titleposition = :left,
              grid = false, xaxis = nothing, yaxis = nothing, 
-             showaxis = false, 
-             bottom_margin = 5mm)
+             showaxis = false)
 
 plt_house_effects = plot(title,
                          plt_house[1],
@@ -588,7 +490,34 @@ savefig(plt_dens, "Images/Ontario/ON_vote_intention_2022.png")
 
 
 
+plt_trend_180 = plot(size = (750, 500), 
+                    legend = :topright, fontfamily = :Verdana, 
+                    left_margin = 10mm, bottom_margin = 15mm, 
+                    ylabel = "Vote intention (%)")
+ylims!(plt_trend_180, (0.0, 0.65))
+for i in 1:length(colours)
+    scatter!(plt_trend_180, on_polls.PollDate[on_polls.PollDate .≥ day_180_before], 
+             on_polls[on_polls.PollDate .≥ day_180_before, parties[i]] / 100, 
+             label = parties_names[i], 
+             mc = colours[i],
+             markersize = 6)
+    plot!(plt_trend_180, xi_days[xi_days .≥ day_180_before], 
+          ξ_summary[1, xi_days .≥ day_180_before, i], 
+          ribbon = (ξ_summary[4, xi_days .≥ day_180_before, i], 
+                    ξ_summary[5, xi_days .≥ day_180_before, i]), 
+          label = nothing, fc = colours[i], 
+           lc = colours[i], lw = 2)
+end
 
+title!(plt_trend_180, "Estimated vote intention of Ontario voters:\nLast 180 days", 
+       title_align= :left, titlefontsize = 12)
+annotate!(plt_trend_180, xi_days[end], -0.08, 
+          StatsPlots.text("Source: Wikipedia. Analysis by sjwild.github.io\nUpdated $updated_date", 
+                          :lower, :right, 8, :grey))
+yticks!(plt_trend_180, [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6], 
+             ["0", "10", "20", "30", "40", "50", "60"])
+
+savefig(plt_trend_180, "Images/Ontario/ON_vote_intention_last_180_days.png")
 
 [ξ_summary[:, end, i] for i in 1:size(ξ, 3)]
 

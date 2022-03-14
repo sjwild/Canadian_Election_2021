@@ -13,10 +13,10 @@ using PlotlyBase
 
 
 # Set some global variables for Plots
-updated_date = "February 19, 2022"
-day_title = "February 19, 2022"
-update_date = Date(2022, 02, 19)
-value_date = Date(2022, 02, 19)
+updated_date = "February 18, 2022"
+day_title = "February 18, 2022"
+update_date = Date(2022, 02, 18)
+value_date = Date(2022, 02, 18)
 dateformat = DateFormat("y-m-d")
 
 
@@ -412,9 +412,8 @@ mode_id = Vector(can_polls.mode_id)
 
 
     # Transform parameters
-    ρ ~ filldist(MvNormal(zeros(N_parties), Ρ), N_days-2)
-
-    Ω = diagm(ω) * ρ
+    z_ω ~ filldist(Normal(0, 1), N_parties, (N_days-2))
+    Ω = diagm(ω) * Ρ * diagm(ω) * z_ω
 
 
     ξ[1, :] = start_election
@@ -469,8 +468,8 @@ mod_election = state_space_elections(y_mat,
 
 
 # Set iters
-n_adapt = 1000
-n_iter = 1000
+n_adapt = 750
+n_iter = 750
 n_chains = 4
 
 # Define and run model
@@ -562,7 +561,7 @@ for i in 1:length(parties)
     vline!(plt_tmp, [0.0], linestyle = :dot, lc = :orange)
     xticks!(plt_tmp, ([-.1, -0.05, 0, 0.05, .1], ["-10", "-5", "0", "5", "10"]))
     if i == 1
-        yticks!(plt_tmp, 0.5:1:(length(pollsters) - 0.5), pollsters)
+        yticks!(plt_tmp, 0.5:1:(length(pollsters) + 0.5), pollsters)
     else
         yaxis!(plt_tmp, y_ticks = nothing)
     end
@@ -578,12 +577,10 @@ annotate!(plt_house[7], .1, -2.0,
           StatsPlots.text("Source: Wikipedia. Analysis by sjwild.github.io\nUpdated $updated_date", 
           :lower, :right, 8, :grey))
 
-title = plot(title = "House effects at the federal level: 2019 to 2022", 
-             titlefontsize = 20,
+title = plot(title = "House effects: 2019 to 2022", titlefontsize = 16,
              titlefontfamily = :Verdana,
-             titleposition = :left,
              grid = false, xaxis = nothing, yaxis = nothing, 
-             showaxis = false)
+             showaxis = false, bottom_margin = 1mm)
 
 plt_house_effects = plot(title,
                          plt_house[1],
@@ -635,7 +632,7 @@ for i in 1:(N_parties)
                         lc = colours[i], lw = 2)
 end
 
-ann_loc = maximum(ξ) - 0.05
+ann_loc = maximum(ξ[:, :, :]) 
 annotate!(plt_dens, ann_loc, -30, 
           StatsPlots.text("Source: Wikipedia. Analysis by sjwild.github.io\nUpdated $updated_date", 
                           :lower, :right, 8, :grey))

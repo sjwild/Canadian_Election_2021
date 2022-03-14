@@ -18,18 +18,25 @@ The Julia model is run using Turing.jl. The Turing model is coded using a differ
 
 The predictions for voting intention (that is, for the period after the 2021 federal election assume that the polling errors are the same after the election as before it. That may or may not be true. I suspect that polling errors are correlated between periods.
 
+## Update
+I have also coded a third version, which uses Julia to call and run the Stan model. This is the current version used to generate the results. 
+
+The new Julia version is run from a master script, which calls the subscripts for the different sections. A number of custom functions are used to simplify the scripts, at the cost of making it more difficult for outsiders to follow the steps.
+
+The intent of the custom functions is to try standardize the steps so that plots are produced in the same style. Where I can, I try take advantage of Julia's multiple dispatch and `kwargs...` arguments.
+
 ## Vote intention
 
-![alt text](https://github.com/sjwild/Canadian_Election_2021/raw/main/Images/can_vote_intention_post_2021.png "Density plot of estimated vote share per party.")
+![alt text](https://github.com/sjwild/Canadian_Election_2021/raw/main/Images/Federal/can_vote_intention_post_2021.png "Density plot of estimated vote share per party.")
 
 
-![alt text](https://github.com/sjwild/Canadian_Election_2021/raw/main/Images/can_vote_intention_2019_post_2021.png "Vote share of Canadian parties from 2019 to 2021.")
+![alt text](https://github.com/sjwild/Canadian_Election_2021/raw/main/Images/Federal/can_vote_intention_2019_post_2021.png "Vote share of Canadian parties from 2019 to 2021.")
 
 
 ## House effects
 House effects vary, but in general firms tended to overestimate PPC, NDP and Green Party vote share while underestimating LPC, CPC, and BQ vote share. 
 
-![alt text](https://github.com/sjwild/Canadian_Election_2021/raw/main/Images/house_effects_pollsters_2019_2021.png "House effects of Canadian polling firms from 2019 to 2021.")
+![alt text](https://github.com/sjwild/Canadian_Election_2021/raw/main/Images/Federal/house_effects_pollsters_2019_2021.png "House effects of Canadian polling firms from 2019 to 2021.")
 
 # Ontario
 There will be an Ontario sometime around the beginning of June, 2022. I estimate the vote intention of Ontario voters using the models above.
@@ -47,8 +54,9 @@ There will be an Ontario sometime around the beginning of June, 2022. I estimate
 ![alt text](https://github.com/sjwild/Canadian_Election_2021/raw/main/Images/Ontario/ON_house_effects_pollsters_2014_2022.png "House effects of polling firms surveying residents of Ontario, 2014 to 2022.")
 
 # Future plans
-I intend to update this model and estimate of latent voting intentions approximately "whenever I feel like it", or probably once every few weeks. If and when I get energetic I may try recode the model to run faster.
+I intend to update this model and estimate of latent voting intentions approximately "whenever I feel like it", or probably once every few weeks. 
 
+Eventually, I intend to use the Julia and Stan version of the code and slowly add in other provinces to the election results. Up next will be Quebec, followed by Alberta and BC. Besides adding provinces, I also intend to try add some interactive plots. We'll see how that turns out.
 
 
 # References/inspirations
