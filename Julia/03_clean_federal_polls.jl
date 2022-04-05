@@ -1,10 +1,4 @@
 
-
-polling_firms_fed =  ["Abacus Data", "Leger", "Mainstreet Research", "Nanos Research",
-                     "Campaign Research", "Innovative Research", "EKOS", "Angus Reid",
-                     "Ipsos", "DART/Maru", "Forum Research", "Research Co.",
-                     "Pollara", "Insights West", "Stratcom", "Counsel", "Delphi Polling",
-                     "Earnscliffe/Leger"] 
 parties_fed = [:LPC, :CPC, :NDP, :BQ, :GPC, :PPC]
 colours_fed = [:red, :blue, :orange, :cyan, :green, :purple, :yellow]
 parties_names_fed = ["LPC", "CPC", "NDP", "BQ", "GPC", "PPC", "Other"]
@@ -13,7 +7,7 @@ parties_names_fed = ["LPC", "CPC", "NDP", "BQ", "GPC", "PPC", "Other"]
 # clean 2021+ pre-campaign polls
 dropmissing!(pre_polls_fed, :LPC)
 pre_polls_fed.Polling_firm = pre_polls_fed[:, "Polling firm"]
-pre_polls_fed = pre_polls_fed[in(polling_firms_fed).(pre_polls_fed.Polling_firm), :]
+pre_polls_fed = pre_polls_fed[in(polling_firms).(pre_polls_fed.Polling_firm), :]
 pre_polls_fed.PollDate = pre_polls_fed[:, "Last dateof polling[a]"]
 pre_polls_fed.Others = pre_polls_fed[:, "Others[b]"]
 pre_polls_fed.SampleSize = pre_polls_fed[:, "Samplesize[d]"]
@@ -31,7 +25,7 @@ pre_polls_fed.GPC = clean_mean(pre_polls_fed.GPC)
 # Clean 2021 pre-campaign polls
 dropmissing!(pre_2021_polls_fed, :LPC)
 pre_2021_polls_fed.Polling_firm = pre_2021_polls_fed[:, "Polling firm"]
-pre_2021_polls_fed = pre_2021_polls_fed[in(polling_firms_fed).(pre_2021_polls_fed.Polling_firm), :]
+pre_2021_polls_fed = pre_2021_polls_fed[in(polling_firms).(pre_2021_polls_fed.Polling_firm), :]
 pre_2021_polls_fed.PollDate = pre_2021_polls_fed[:, "Last dateof polling[a]"]
 pre_2021_polls_fed.SampleSize = pre_2021_polls_fed[:, "Samplesize[c]"]
 pre_2021_polls_fed.SampleSize = clean_samplesize(pre_2021_polls_fed.SampleSize)
@@ -48,7 +42,7 @@ pre_2021_polls_fed.PPC = clean_mean(pre_2021_polls_fed.PPC)
 # Clean 2021 pre-campaign polls
 dropmissing!(campaign_2021_polls_fed, :LPC)
 campaign_2021_polls_fed.Polling_firm = campaign_2021_polls_fed[:, "Polling firm"]
-campaign_2021_polls_fed = campaign_2021_polls_fed[in(polling_firms_fed).(campaign_2021_polls_fed.Polling_firm), :]
+campaign_2021_polls_fed = campaign_2021_polls_fed[in(polling_firms).(campaign_2021_polls_fed.Polling_firm), :]
 campaign_2021_polls_fed.PollDate = campaign_2021_polls_fed[:, "Last dateof polling[a]"]
 campaign_2021_polls_fed.SampleSize = campaign_2021_polls_fed[:, "Samplesize[c]"]
 campaign_2021_polls_fed.SampleSize = clean_samplesize(campaign_2021_polls_fed.SampleSize)

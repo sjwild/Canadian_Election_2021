@@ -1,35 +1,35 @@
 
-parties_ON = [:PC, :NDP, :Liberal, :Green, :Other]
-colours_ON = [:blue, :orange, :red, :green, :yellow]
-parties_names_ON = ["PC", "NDP", "Liberal", "Green", "Others"]
+
+# Polling firms for subsetting
+# Note: Need to keep an eye on 2021 campaign and add in any missing pollsters
+# Should new pollsters show up in Wikipedia tables
+
+parties_QC = [:CAQ, :QLP, :PQ, :QS, :Other]
 
 # clean pre 2022 election polls
-allowmissing!(pre_polls_ON)
-#pre_polls_ON.Green[pre_polls_ON.Green .== "10[a]"] .= missing
-dropmissing!(pre_polls_ON, [:PC, :Green])
+allowmissing!(pre_polls_QC)
 
-pre_polls_ON.Polling_firm = pre_polls_ON[:, "Polling firm"]
-pre_polls_ON = pre_polls_ON[in(polling_firms).(pre_polls_ON.Polling_firm), :]
-pre_polls_ON.PollDate = pre_polls_ON[:, "Last dateof polling"]
-pre_polls_ON.SampleSize = pre_polls_ON[:, "Sample size"]
-pre_polls_ON.SampleSize = clean_samplesize(pre_polls_ON.SampleSize)
-pre_polls_ON.mode = clean_mode(pre_polls_ON[:, "Polling type"])
-pre_polls_ON.PC = clean_mean(pre_polls_ON.PC)
-pre_polls_ON.NDP = clean_mean(pre_polls_ON.NDP)
-pre_polls_ON.Liberal = clean_mean(pre_polls_ON.Liberal)
-pre_polls_ON.Green = clean_mean(pre_polls_ON.Green)
-pre_polls_ON.Other = replace.(pre_polls_ON.Other, "2[a]" => "2",
-                                            "5[b]" => "5")
-pre_polls_ON.Other = clean_mean(pre_polls_ON.Other)
+pre_polls_QC.Polling_firm = pre_polls_QC[:, "Polling organisation"]
+pre_polls_QC = pre_polls_QC[in(polling_firms).(pre_polls_QC.Polling_firm), :]
+pre_polls_QC.PollDate = pre_polls_QC[:, "Last date of polling"]
+pre_polls_QC.SampleSize = pre_polls_QC[:, "Sample size"]
+pre_polls_QC.SampleSize[pre_polls_QC.SampleSize .== "1,407–71"] .= "1,407"
+pre_polls_QC.SampleSize = clean_samplesize(pre_polls_QC.SampleSize)
+pre_polls_QC.CAQ = clean_mean(pre_polls_QC.CAQ)
+pre_polls_QC.QLP = clean_mean(pre_polls_QC.Liberal)
+pre_polls_QC.PQ = clean_mean(pre_polls_QC.PQ)
+pre_polls_QC.QS = clean_mean(pre_polls_QC.QS)
+pre_polls_QC.Other = 100 .- [sum(pre_polls_QC[i, [:CAQ, :QLP, :PQ, :QS]]) for i in 1:size(pre_polls_QC, 1)]
 
 
 
 # Clean 2018 polls
-dropmissing!(polls_2018_ON, :PC)
-polls_2018_ON.Polling_firm = polls_2018_ON[:, "Polling organisation"]
-polls_2018_ON = polls_2018_ON[in(polling_firms).(polls_2018_ON.Polling_firm), :]
-polls_2018_ON.PollDate = polls_2018_ON[:, "Last date of polling"]
-polls_2018_ON.SampleSize = polls_2018_ON[:, "Sample size"]
+allowmissing!(polls_2018_QC)
+dropmissing!(polls_2018_QC, :CAQ)
+polls_2018_QC.Polling_firm = polls_2018_QC[:, "Polling firm"]
+polls_2018_QC = polls_2018_QC[in(polling_firms).(polls_2018_QC.Polling_firm), :]
+polls_2018_QC.PollDate = polls_2018_QC[:, "Last date of polling"]
+polls_2018_QC.SampleSize = polls_2018_QC[:, "Sample size"]
 polls_2018_ON.SampleSize = clean_samplesize(polls_2018_ON.SampleSize)
 polls_2018_ON.mode = clean_mode(polls_2018_ON[:, "Polling type"])
 polls_2018_ON.PC = clean_mean(polls_2018_ON.PC)

@@ -77,7 +77,7 @@ function clean_mean(x::Vector{String})
 
     tmp = Vector{Union{Missing, Float64}}(undef, length(x))
 
-    idx = in(["N/A", "–", "n/a"]).(x)
+    idx = in(["N/A", "–", "n/a", "—"]).(x)
 
     tmp[Not(idx)] = parse.(Float64, x[Not(idx)])
     
@@ -88,7 +88,7 @@ function clean_mean(x::Vector{Union{Missing, String}})
 
     tmp = Vector{Union{Missing, Float64}}(undef, length(x))
 
-    idx = in(["N/A", "–", "n/a"]).(x)
+    idx = in(["N/A", "–", "n/a", "—"]).(x)
 
     tmp[Not(idx)] = parse.(Float64, x[Not(idx)])
     

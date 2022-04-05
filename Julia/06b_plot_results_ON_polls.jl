@@ -44,8 +44,8 @@ house_effects_ON = plot(title_ON,
 density_ON = plot_density(ON_results,
                           colours_ON,
                           "Estimated vote intention of Ontario voters: $day_title";
-                          annotationx = 0.50,
-                          annotationy = -8.0);
+                          annotationx = 0.45,
+                          annotationy = -12.0);
 
 
 

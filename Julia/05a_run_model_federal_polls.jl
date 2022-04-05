@@ -17,10 +17,12 @@ tmpdir = joinpath(@__DIR__, "tmp")
 sm_fed = SampleModel("ss_ncp", state_space_ncp, tmpdir)
 rc_fed = stan_sample(sm_fed; 
                      data = data_fed, 
-                     num_samples = 750,
-                     num_warmups = 750,
+                     num_samples = 1000,
+                     num_warmups = 1000,
                      num_chains = 4, 
+                     max_depth = 12,
                      seed = 943129384)
+diagnose(sm_fed)
 
 fed_results = summarize_data(rc_fed,
                              sm_fed,

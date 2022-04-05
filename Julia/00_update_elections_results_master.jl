@@ -2,6 +2,8 @@
 ENV["CMDSTAN"] = expanduser("~/cmdstan/")
 
 # activate ElectionModelling
+using Pkg
+Pkg.activate("ElectionModelling")
 
 using Plots, StatsPlots
 using RCall
@@ -16,10 +18,10 @@ using MCMCChains
 using StatsBase
 
 # Set some global variables for Plots
-updated_date = "March 14, 2022"
-day_title = "March 14, 2022"
-update_date = Date(2022, 03, 14)
-value_date = Date(2022, 03, 14)
+updated_date = "April 4, 2022"
+day_title = "April 4, 2022"
+update_date = Date(2022, 04, 04)
+value_date = Date(2022, 04, 04)
 dateformat = DateFormat("y-m-d")
 
 # Load custom functions for cleaning and post-processing
