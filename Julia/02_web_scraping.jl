@@ -8,7 +8,7 @@ wiki_ON <- read_html("https://en.wikipedia.org/wiki/2022_Ontario_general_electio
 wiki_tables_ON <- html_table(wiki_ON, 
                              fill = TRUE, 
                              header = TRUE)
-pre_polls_ON <- wiki_tables_ON[[9]]
+pre_polls_ON <- wiki_tables_ON[[12]]
 
 
 wiki_2018_ON <- read_html("https://en.wikipedia.org/wiki/2018_Ontario_general_election#Opinion_polls")
