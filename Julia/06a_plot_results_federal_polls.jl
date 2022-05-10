@@ -54,7 +54,8 @@ house_effects_fed = plot(title_fed,
 density_fed = plot_density(fed_results,
                            colours_fed,
                            "Estimated vote intention at the federal level: $day_title";
-                           annotationy = -30.0);
+                           annotationy = -30.0,
+                           annotationx = 0.48);
 
 
 
