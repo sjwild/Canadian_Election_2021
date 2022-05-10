@@ -8,7 +8,9 @@ wiki_ON <- read_html("https://en.wikipedia.org/wiki/2022_Ontario_general_electio
 wiki_tables_ON <- html_table(wiki_ON, 
                              fill = TRUE, 
                              header = TRUE)
-pre_polls_ON <- wiki_tables_ON[[12]]
+pre_polls_ON <- wiki_tables_ON[[14]]
+campaign_polls_ON <- wiki_tables_ON[[13]]
+
 
 
 wiki_2018_ON <- read_html("https://en.wikipedia.org/wiki/2018_Ontario_general_election#Opinion_polls")
@@ -16,10 +18,6 @@ wiki_tables_2018_ON <- html_table(wiki_2018_ON,
                                   fill = TRUE, 
                                   header = TRUE)
 polls_2018_ON <- wiki_tables_2018_ON[[72]]
-
-
-
-
 
 
 # Federal polls
@@ -46,8 +44,9 @@ pre_2021_polls_fed <- wiki_tables_2021_fed[[4]]
 campaign_2021_polls_fed <- wiki_tables_2021_fed[[3]]
 
 
+"""
 
-
+"""
 # Opinion_polls QC
 wiki_QC <- read_html("https://en.wikipedia.org/wiki/2022_Quebec_general_election#Opinion_polls")
 wiki_tables_QC <- html_table(wiki_QC, 
@@ -62,9 +61,8 @@ wiki_tables_2018_QC <- html_table(wiki_2018_QC,
                                   header = TRUE)
 polls_2018_QC <- wiki_tables_2018_QC[[4]][, 1:9]
 
-
-
 """
+
 
 # Extract federal polls
 pre_polls = @rget pre_polls_fed
@@ -74,13 +72,14 @@ campaign_2021_polls = @rget campaign_2021_polls_fed
 
 
 # extract Ontario polls
+campaign_polls_ON = @rget campaign_polls_ON
 pre_polls_ON = @rget pre_polls_ON
 polls_2018_ON = @rget polls_2018_ON
 
 
 # Extract Quebec polls
-pre_polls_QC = @rget pre_polls_QC
-polls_2018_QC = @rget polls_2018_QC
+#pre_polls_QC = @rget pre_polls_QC
+#polls_2018_QC = @rget polls_2018_QC
 
 
 

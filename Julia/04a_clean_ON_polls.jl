@@ -3,6 +3,28 @@ parties_ON = [:PC, :NDP, :Liberal, :Green, :Other]
 colours_ON = [:blue, :orange, :red, :green, :yellow]
 parties_names_ON = ["PC", "NDP", "Liberal", "Green", "Others"]
 
+
+# clean pre 2022 election polls
+allowmissing!(campaign_polls_ON)
+#campaign_polls_ON.Green[campaign_polls_ON.Green .== "10[a]"] .= missing
+dropmissing!(campaign_polls_ON, [:PC, :Green])
+
+campaign_polls_ON.Polling_firm = campaign_polls_ON[:, "Polling firm"]
+campaign_polls_ON.Polling_firm[contains.(campaign_polls_ON.Polling_firm, "Mainstreet")] .= "Mainstreet Research"
+campaign_polls_ON = campaign_polls_ON[in(polling_firms).(campaign_polls_ON.Polling_firm), :]
+campaign_polls_ON.PollDate = campaign_polls_ON[:, "Last dateof polling"]
+campaign_polls_ON.SampleSize = campaign_polls_ON[:, "Sample size"]
+campaign_polls_ON.SampleSize = clean_samplesize(campaign_polls_ON.SampleSize)
+campaign_polls_ON.mode = clean_mode(campaign_polls_ON[:, "Polling type"])
+campaign_polls_ON.PC = clean_mean(campaign_polls_ON.PC)
+campaign_polls_ON.NDP = clean_mean(campaign_polls_ON.NDP)
+campaign_polls_ON.Liberal = clean_mean(campaign_polls_ON.Liberal)
+campaign_polls_ON.Green = clean_mean(campaign_polls_ON.Green)
+campaign_polls_ON.Other = clean_mean(campaign_polls_ON.Other)
+
+
+
+
 # clean pre 2022 election polls
 allowmissing!(pre_polls_ON)
 #pre_polls_ON.Green[pre_polls_ON.Green .== "10[a]"] .= missing
@@ -54,7 +76,8 @@ polls_2018_ON = polls_2018_ON[polls_2018_ON.Other .≥ 0, :]
 # Combine polls into one DataFrame
 subset_vars_ON = ["Polling_firm", "PollDate", "PC", "NDP", "Liberal", "Green", "Other",
                   "SampleSize", "mode"]
-polls_ON = vcat(pre_polls_ON[:, subset_vars_ON], 
+polls_ON = vcat(campaign_polls_ON[:, subset_vars_ON],
+                pre_polls_ON[:, subset_vars_ON], 
                 polls_2018_ON[:, subset_vars_ON])
 
 

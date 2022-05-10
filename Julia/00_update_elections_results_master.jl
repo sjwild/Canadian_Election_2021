@@ -18,10 +18,10 @@ using MCMCChains
 using StatsBase
 
 # Set some global variables for Plots
-updated_date = "April 4, 2022"
-day_title = "April 4, 2022"
-update_date = Date(2022, 04, 04)
-value_date = Date(2022, 04, 04)
+updated_date = "May 09, 2022"
+day_title = "May 09, 2022"
+update_date = Date(2022, 05, 09)
+value_date = Date(2022, 05, 09)
 dateformat = DateFormat("y-m-d")
 
 # Load custom functions for cleaning and post-processing
