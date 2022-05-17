@@ -16,7 +16,7 @@ trend_fed = plot_trend(fed_results,
                        legend = :topleft,
                        yticks = ([0.0, 0.1, 0.2, 0.3, 0.4, 0.5], 
                                   ["0", "10", "20", "30", "40", "50"]),
-                        annotationy = -0.07);
+                       annotationy = -0.07);
 
 # plot trend for last 180 days
 trend_180_fed = plot_trend(fed_results,
@@ -55,7 +55,7 @@ density_fed = plot_density(fed_results,
                            colours_fed,
                            "Estimated vote intention at the federal level: $day_title";
                            annotationy = -30.0,
-                           annotationx = 0.48);
+                           annotationx = 0.42);
 
 
 

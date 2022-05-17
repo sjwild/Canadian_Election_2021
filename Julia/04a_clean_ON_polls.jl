@@ -20,6 +20,8 @@ campaign_polls_ON.PC = clean_mean(campaign_polls_ON.PC)
 campaign_polls_ON.NDP = clean_mean(campaign_polls_ON.NDP)
 campaign_polls_ON.Liberal = clean_mean(campaign_polls_ON.Liberal)
 campaign_polls_ON.Green = clean_mean(campaign_polls_ON.Green)
+#campaign_polls_ON.Other = replace.(campaign_polls_ON.Other, "2[a]" => "2",
+#                                                            "5[b]" => "5")
 campaign_polls_ON.Other = clean_mean(campaign_polls_ON.Other)
 
 

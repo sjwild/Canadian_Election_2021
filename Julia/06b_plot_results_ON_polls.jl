@@ -45,7 +45,7 @@ density_ON = plot_density(ON_results,
                           colours_ON,
                           "Estimated vote intention of Ontario voters: $day_title";
                           annotationx = 0.45,
-                          annotationy = -12.0);
+                          annotationy = -20.0);
 
 
 
