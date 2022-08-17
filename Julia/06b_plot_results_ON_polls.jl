@@ -27,7 +27,7 @@ trend_180_ON = plot_trend(ON_results,
 
 # Plot house effects
 plt_house_ON, title_ON, ann_ON = plot_house(ON_results,
-                                            "House effects in Ontario: 2014 to 2022")
+                                            "House effects in Ontario: 2018 to 2022")
 
 house_effects_ON = plot(title_ON,
                         plt_house_ON[1],
