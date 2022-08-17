@@ -8,7 +8,7 @@ colours_ON = Dict("Liberal" => :red,
 trend_ON = plot_trend(ON_results,
                       polls_ON,
                       colours_ON,
-                      "Estimated vote intention of Ontario voters:\n2014 to 2022";
+                      "Estimated vote intention of Ontario voters:\n2018 to 2022";
                       yticks = ([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, .6, .7], 
                                 ["0", "10", "20", "30", "40", "50", "60", "70"]),
                       ylims = (0, .7));
@@ -43,9 +43,11 @@ house_effects_ON = plot(title_ON,
 # Plots densities showing predicted vote
 density_ON = plot_density(ON_results,
                           colours_ON,
-                          "Estimated vote intention of Ontario voters: $day_title";
-                          annotationx = 0.45,
-                          annotationy = -20.0);
+                          "Estimated vote intention of Ontario voters:\n$day_title";
+                          annotationx = 0.65,
+                          annotationy = -12.,
+                          xticks = ([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6], 
+                                  ["0", "10", "20", "30", "40", "50", "60"]));
 
 
 

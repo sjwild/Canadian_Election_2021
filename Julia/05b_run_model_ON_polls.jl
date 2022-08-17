@@ -3,11 +3,11 @@
 
 # Prep data for Stan model
 data_ON = prep_stan_data(parties_ON,
-                         election_day_2014_ON,
                          election_day_2018_ON,
+                         election_day_2022_ON,
                          update_date,
-                         Vector([0.3125, 0.32375, 0.3865, 0.0484, 0.0151]),
                          Vector([0.4050, 0.3356, 0.1959, 0.046, 0.0175]),
+                         Vector([0.4082, 0.2374, 0.2382, 0.060, 0.0562]),
                         polls_ON) 
 
 
@@ -32,5 +32,5 @@ ON_results = summarize_data(rc_ON,
                             parties_ON,
                             maximum(polls_ON.pollster_id),
                             reverse_pollster_ON,
-                            election_day_2014_ON,
+                            election_day_2018_ON,
                             update_date)

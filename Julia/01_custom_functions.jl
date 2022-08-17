@@ -14,56 +14,23 @@ end
 
 # These are a collection of custom functions to clean the poll data
 # custom functions
-function clean_mode(x::Vector{String})
-
-    xmode = Vector{Union{Missing, String}}(undef, length(x))
-
-    for i in 1:length(x)
-  
-        if contains(x[i], "online/telephone")
-            xmode[i] = "Online - telephone"
-        elseif contains(x[i], "telephone/IVR")
-            xmode[i] = "telephone - IVR"
-        elseif contains(x[i], "IVR") == true  & 
-            contains(x[i], "telephone - IVR") == false
-            xmode[i] = "IVR"
-        elseif contains(x[i], "online") == true &
-            contains(x[i], "Online - telephone") == false
-            xmode[i] = "online"
-        elseif contains(x[i], "telephone") == true &
-            contains(x[i], "telephone - IVR") == false &
-            contains(x[i], "Online - telephone") == false
-            xmode[i] = "telephone"
-            
-        end
-
-    end
-    
-  return xmode
-  
-end
-
 function clean_mode(x::Vector{Union{Missing, String}})
 
     xmode = Vector{Union{Missing, String}}(undef, length(x))
+    x = lowercase.(x)
 
     for i in 1:length(x)
-  
-        if contains(x[i], "online/telephone")
+
+        if contains(x[i], "telephone") & contains(x[i], "online")
             xmode[i] = "Online - telephone"
-        elseif contains(x[i], "telephone/IVR")
-            xmode[i] = "telephone - IVR"
-        elseif contains(x[i], "IVR") == true  & 
-            contains(x[i], "telephone - IVR") == false
+        elseif contains(x[i], "online")
+            xmode[i] = "Online"
+        elseif contains(x[i], "telephone") & contains(x[i], "ivr")
+            xmode[i] = "Telephone - IVR"
+        elseif contains(x[i], "ivr") 
             xmode[i] = "IVR"
-        elseif contains(x[i], "online") == true &
-            contains(x[i], "Online - telephone") == false
-            xmode[i] = "online"
-        elseif contains(x[i], "telephone") == true &
-            contains(x[i], "telephone - IVR") == false &
-            contains(x[i], "Online - telephone") == false
+        elseif contains(x[i], "telephone")
             xmode[i] = "telephone"
-            
         end
 
     end
@@ -71,6 +38,9 @@ function clean_mode(x::Vector{Union{Missing, String}})
   return xmode
   
 end
+
+clean_mode(x::Vector{String}) = clean_mode(Vector{Union{Missing, String}}(x))
+
 
 
 function clean_mean(x::Vector{String})
@@ -640,5 +610,51 @@ function clean_results(X::Vector, outcome_vars::Vector, p::Vector, election::Vec
     results.Election_Other = [election[6] for i in 1:size(results, 1)]
 
     return results
+
+end
+
+
+
+
+
+
+
+# Functions for estimating mode effects
+function prep_stan_data_mode(parties::Vector{Symbol},
+                             first_election_date::Date,
+                             second_election_date::Date,
+                             first_election_results::Vector{Float64},
+                             second_election_results::Vector{Float64},
+                             polls::DataFrame)
+
+# Ensure correct number of parties
+    parties_tmp = parties_other(parties)
+
+    # build matrices needed below
+    y_mat = Matrix{Float64}(polls[:, parties_tmp])
+    y_mat_moe = Matrix{Float64}(calc_moe.(y_mat, polls.SampleSize))
+
+    data = Dict(
+
+        "N_days" => calc_date(second_election_date, first_election_date),
+        "N_parties" => length(parties_tmp),
+        "N_polls" => size(polls, 1),
+        "N_pollsters" => length(unique(polls.pollster_id)),
+        "N_modes" => length(unique(polls.mode_id)),
+
+        "xi_start" => first_election_results,
+        "xi_end" => second_election_results,
+
+        "y" => y_mat',
+        "y_moe" => y_mat_moe',
+
+        "poll_date" => polls.NumDays,
+        "pollster_id" => polls.pollster_id,
+
+        "mode_id" => polls.mode_id
+
+    ) 
+
+    return data
 
 end
