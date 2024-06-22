@@ -31,6 +31,8 @@ function clean_mode(x::Vector{Union{Missing, String}})
             xmode[i] = "IVR"
         elseif contains(x[i], "telephone")
             xmode[i] = "telephone"
+        elseif contains(x[i], "–")
+            xmode[i] = missing
         end
 
     end
@@ -82,6 +84,7 @@ function clean_samplesize(x::Vector)
     x = replace.(x, " (1/2)" => "")
     x = replace.(x, " (2/2)" => "")
     x = replace.(x, " (1/4)" => "")
+    x = replace.(x, " (3/4)" => "")
     x = replace.(x, "+" => "")
     x = replace.(x, "," => "")
     x = parse.(Int, x)
@@ -365,7 +368,7 @@ function plot_trend(results::ElectionResults,
                 legendfontsize = 10,
                 yticks = yticks,
                 annotation = (annotationx, annotationy, #annotation_location
-                                Plots.text("Source: Wikipedia. Analysis by sjwild.github.io\nUpdated $updated_date", 
+                                Plots.text("Source: Wikipedia.\nAnalysis by sjwild.github.io\nUpdated $updated_date", 
                                             :lower, :right, 8, :grey));
                 kwargs...)
 

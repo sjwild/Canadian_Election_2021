@@ -17,7 +17,7 @@ wiki_ON <- read_html("https://en.wikipedia.org/wiki/44th_Ontario_general_electio
 wiki_tables_ON <- html_table(wiki_ON,
                              fill = TRUE,
                              header = TRUE)
-polls_ON <- wiki_tables_ON[[6]]
+polls_ON <- wiki_tables_ON[[7]][,1:13]
 
 
 # Federal polls
@@ -43,6 +43,7 @@ pre_2021_polls_fed <- wiki_tables_2021_fed[[4]]
 # Campaing polls for pre-2021 election
 campaign_2021_polls_fed <- wiki_tables_2021_fed[[3]]
 
+pre_2021_polls_fed
 
 """
 

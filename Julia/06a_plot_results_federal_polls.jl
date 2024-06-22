@@ -11,12 +11,13 @@ colours_fed = Dict("LPC" => :red,
 trend_fed = plot_trend(fed_results,
                        polls_fed,
                        colours_fed,
-                       "Estimated vote intention of Canadian voters:\n2019 to 2022";
+                       "Estimated vote intention of Canadian voters:\n2019 to 2024";
                        ylims = (0, .55),
                        legend = :topleft,
                        yticks = ([0.0, 0.1, 0.2, 0.3, 0.4, 0.5], 
                                   ["0", "10", "20", "30", "40", "50"]),
-                       annotationy = -0.07);
+                       annotationy = -0.05,
+                       size = (1100, 750));
 
 # plot trend for last 180 days
 trend_180_fed = plot_trend(fed_results,
@@ -28,12 +29,13 @@ trend_180_fed = plot_trend(fed_results,
                            legend = :topleft,
                            yticks = ([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6], 
                                      ["0", "10", "20", "30", "40", "50", "60"]),
-                           annotationy = -0.07);
+                           annotationy = -0.05,
+                           size = (1100, 750));
 
 
 # Plot house effects
 plt_house_fed, title_fed, ann_fed = plot_house(fed_results,
-                                      "House effects at the federal level: 2019 to 2022")
+                                      "House effects at the federal level: 2019 to 2024")
 
 
 house_effects_fed = plot(title_fed,
@@ -54,8 +56,8 @@ house_effects_fed = plot(title_fed,
 density_fed = plot_density(fed_results,
                            colours_fed,
                            "Estimated vote intention at the federal level:\n$day_title";
-                           annotationy = -30.0,
-                           annotationx = 0.44);
+                           annotationy = -40.0,
+                           annotationx = 0.50);
 
 
 
@@ -73,5 +75,9 @@ savefig(trend_180_fed, "Images/Federal/can_vote_intention_last_180_days.png")
 
 show_results(fed_results)
 
+trend_fed
+house_effects_fed
+density_fed
+trend_180_fed
 
 

@@ -63,3 +63,8 @@ savefig(trend_180_ON, "Images/Ontario/ON_vote_intention_last_180_days.png")
 
 
 show_results(ON_results)
+
+trend_ON
+house_effects_ON
+density_ON
+trend_180_ON
